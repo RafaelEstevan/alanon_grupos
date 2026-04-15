@@ -768,4 +768,32 @@
     } else {
         console.warn('Elemento #btn-acolhimento não encontrado. Adicione o ID ao botão.');
     }
+
+    const hamburger = document.getElementById('hamburger');
+    const navMenu = document.querySelector('.navbar .nav-menu');
+
+    if (hamburger && navMenu) {
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('aberto');
+            navMenu.classList.toggle('aberto');
+        });
+
+        // Fechar menu ao clicar em um link
+        navMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburger.classList.remove('aberto');
+                navMenu.classList.remove('aberto');
+            });
+        });
+    }
+
+    // Fechar menu se clicar fora
+    document.addEventListener('click', (e) => {
+        if (navMenu && navMenu.classList.contains('aberto') &&
+            !navMenu.contains(e.target) &&
+            !hamburger.contains(e.target)) {
+            hamburger.classList.remove('aberto');
+            navMenu.classList.remove('aberto');
+        }
+    });
 })();
