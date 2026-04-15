@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grupos Al-Anon/Alateen</title>
+    <link rel="shortcut icon" href="src/logo_ico.png" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Leaflet core -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Marker Cluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+</head>
+
+<body>
+
+    <!-- BARRA AZUL SUPERIOR -->
+    <div class="topbar">
+        <div class="container">
+            <span>Sede (11) 3331-8799 / (11) 3322-2099</span>
+        </div>
+    </div>
+
+    <!-- HEADER BRANCO (LOGO) -->
+    <header class="fusion-header">
+        <div class="fusion-row">
+            <div class="fusion-logo">
+                <a href="https://www.al-anon.org.br">
+                    <img src="src/logo.png" alt="Al-Anon Logo" class="fusion-standard-logo">
+                </a>
+            </div>
+            <div class="fusion-header-content-3-wrapper">
+                <h3 class="fusion-header-tagline">Para familiares e amigos de alcoólicos.</h3>
+            </div>
+        </div>
+        <nav class="navbar">
+            <div class="container">
+                <ul>
+                    <li><a href="https://wwww.al-anon.org.br">Home</a></li>
+                    <li class="dropdown">
+                        <a href="https://al-anon.org.br/literatura-por-categoria/">Literatura</a>
+                        <ul class="submenu">
+                            <li><a href="https://al-anon.org.br/livros-alanon-alateen/">Livros Al-Anon/Alateen</a></li>
+                            <li><a href="https://al-anon.org.br/livretos-e-folhetos/">Livretos e Folhetos</a></li>
+                            <li><a href="https://al-anon.org.br/diversos/">Diversos</a></li>
+                            <li><a href="https://al-anon.org.br/material-suplementar/">Material Suplementar</a></li>
+                            <li><a href="https://al-anon.org.br/banners/">Banners</a></li>
+                            <li><a href="https://al-anon.org.br/material-para-download/">Material para Download</a></li>
+                            <li><a href="https://al-anon.org.br/guias/">Guias</a></li>
+                            <li><a href="https://al-anon.org.br/se-16-lista-de-precos/">SE-16 Lista de Preços</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="https://al-anon.org.br/material-divulgacao/">Vídeos</a></li>
+                    <li><a href="https://al-anon.org.br/boletim/">Boletim</a></li>
+                    <li><a href="https://al-anon.org.br/contribuicao/">Contribuição</a></li>
+                    <li><a href="#">Grupos</a></li>
+                    <li class="dropdown">
+                        <a href="https://al-anon.org.br/fale-conosco/">Fale Conosco</a>
+                        <ul class="submenu">
+                            <li><a href="https://al-anon.org.br/faleconoscotel/">Telefone</a></li>
+                            <li><a href="https://al-anon.org.br/faleconoscoform/">O Al-Anon Responde</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="https://al-anon.org.br/wso/">WSO</a></li>
+                    <li><a href="https://al-anon.org.br/cart/">Carrinho</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <section class="content">
+        <div class="container grupos-section">
+            <h1>Grupos Al‑Anon/Alateen pelo Brasil</h1>
+            <div class="botoes-grupos">
+                <a href="#" class="btn">Grupos Al-Anon</a>
+                <a href="#" class="btn">Grupos Alateen</a>
+                <a href="#" id="btn-grupos-eletronicos" class="btn">Grupos Eletrônicos</a>
+                <a href="#" id="btn-mapa-geral" class="btn">Mapa</a>
+                <a href="#" id="btn-pesquisa" class="btn">Pesquisa</a>
+            </div>
+            <div class="botao-inferior">
+                <a href="#" id="btn-acolhimento" class="btn-outline">
+                    Ainda não conhece o Al-Anon? Venha a uma Reunião de Acolhimento.
+                </a>
+            </div>
+        </div>
+
+        <section class="estados">
+            <div class="container">
+                <p style="text-align:center;color:#555;font-size:.9rem;margin-bottom:16px;">
+                    Clique na bandeira de um estado para ver os grupos disponíveis.
+                </p>
+                <div class="grid-estados" id="estados-grid">
+                    <!-- Os estados serão preenchidos via JavaScript -->
+                </div>
+            </div>
+        </section>
+    </section>
+
+    <!-- OVERLAY (para fechar o painel) -->
+    <div id="overlay"></div>
+
+    <!-- MODAL DE DETALHES DO LOCAL -->
+    <div id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-grupo-titulo">
+        <div id="modal-grupo">
+            <div class="modal-header">
+                <div class="modal-header-info">
+                    <h2 id="modal-grupo-titulo"></h2>
+                    <div class="modal-subtitulo">
+                        <span id="modal-badge-tipo"></span>
+                        <span id="modal-cidade-uf"></span>
+                    </div>
+                </div>
+                <button id="modal-btn-fechar" aria-label="Fechar modal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-infos" id="modal-infos-conteudo"></div>
+                <div class="modal-mapa-wrap">
+                    <div id="modal-mapa"></div>
+                    <div class="modal-mapa-acoes" id="modal-mapa-acoes"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL MAPA GERAL (todos os locais) -->
+    <div id="modal-mapa-geral" class="mapa-geral-modal">
+        <div class="mapa-geral-container">
+            <div class="mapa-geral-header">
+                <span>📍 Mapa de todos os locais de reunião</span>
+                <button id="btn-fechar-mapa-geral">&times;</button>
+            </div>
+            <div id="mapa-geral"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE PESQUISA -->
+    <div id="modal-pesquisa">
+        <div class="pesquisa-container">
+            <div class="pesquisa-header">
+                <h3>🔍 Pesquisar Locais</h3>
+                <button id="btn-fechar-pesquisa">&times;</button>
+            </div>
+            <div class="pesquisa-busca">
+                <input type="text" id="pesquisa-input" placeholder="Digite o nome do local ou cidade..."
+                    autocomplete="off">
+            </div>
+            <div class="pesquisa-resultados" id="pesquisa-resultados">
+                <div class="estado-msg">
+                    <div class="icone">🔎</div>
+                    <p>Digite o nome do local ou cidade para iniciar a busca.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAINEL LATERAL (grupos por estado) -->
+    <div id="painel-grupos">
+        <div class="painel-header">
+            <h2><img id="painel-bandeira" src="" alt=""><span id="painel-titulo-texto">Grupos</span></h2>
+            <button id="btn-fechar" aria-label="Fechar painel">✕</button>
+        </div>
+        <div class="painel-filtros">
+            <button class="filtro-btn ativo" data-filtro="todos">Todos</button>
+            <button class="filtro-btn" data-filtro="alanon">Al-Anon</button>
+            <button class="filtro-btn" data-filtro="alateen">Alateen</button>
+            <button class="filtro-btn" data-filtro="eletronico">Eletrônicos</button>
+        </div>
+        <div class="painel-busca">
+            <input type="search" id="busca-grupo" placeholder="Buscar por nome, cidade ou bairro…" autocomplete="off">
+        </div>
+        <div id="contador-grupos"></div>
+        <div id="lista-grupos"></div>
+    </div>
+
+    <!-- RODAPÉ -->
+    <footer class="footer-widgets">
+        <div class="container widgets">
+            <address class="footer-left">
+                <strong>Grupos Familiares Al-Anon do Brasil</strong><br>
+                Rua Antônio de Godói, nº 20<br>
+                5° andar - Sala 52 - Centro,<br>
+                São Paulo - SP<br>
+                Telefone: <a href="tel:+551133318799">(11) 3331-8799</a> / <a href="tel:+551132222099">3222-2099</a><br>
+                E-mail: <a href="mailto:alanon@al-anon.org.br">alanon@al-anon.org.br</a>
+            </address>
+            <div class="footer-center">
+                <h3>Escritório de Serviço Mundial</h3>
+                <a href="https://al-anon.org" target="_blank">al-anon.org</a>
+            </div>
+            <div class="footer-right">
+                <h4 class="widget-title">Curta nossa página no Facebook</h4>
+                <div class="fb-page" data-href="https://www.facebook.com/AlAnonBrasil" data-tabs="timeline"
+                    data-width="300" data-height="400" data-small-header="true" data-adapt-container-width="true"
+                    data-hide-cover="false" data-show-facepile="true"></div>
+            </div>
+        </div>
+    </footer>
+    <div class="footer-bottom">
+        <div class="container">
+            <p>Copyright 2012 - 2026 | Al-Anon do Brasil - CNPJ.: 50.603.653/0001-33 - Todos os Direitos Reservados</p>
+        </div>
+    </div>
+
+    <div id="fb-root"></div>
+    <script async defer crossorigin="anonymous"
+        src="https://connect.facebook.net/pt_BR/sdk.js#xfbml=1&version=v18.0"></script>
+    <script src="js/script.js"></script>
+</body>
+
+</html>
