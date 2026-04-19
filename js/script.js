@@ -329,14 +329,15 @@
 
     // ========== CARREGAR DADOS DA API ==========
     async function carregarDados() {
-        if (todosLocais !== null) return todosLocais;
-        const resp = await fetch(API_URL);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const json = await resp.json();
-        if (!json.success) throw new Error(json.message || 'Erro desconhecido');
-        todosLocais = json.data;
-        return todosLocais;
-    }
+    if (todosLocais !== null) return todosLocais;
+    const resp = await fetch(API_URL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const json = await resp.json();
+    if (!json.success) throw new Error(json.message || 'Erro desconhecido');
+    // FILTRA APENAS OS GRUPOS COM situacao = 'Aberto'
+    todosLocais = json.data.filter(local => local.situacao === 'Aberto');
+    return todosLocais;
+}
 
     function tipoGrupo(local) {
         return 'alanon';
@@ -768,32 +769,4 @@
     } else {
         console.warn('Elemento #btn-acolhimento não encontrado. Adicione o ID ao botão.');
     }
-
-    const hamburger = document.getElementById('hamburger');
-    const navMenu = document.querySelector('.navbar .nav-menu');
-
-    if (hamburger && navMenu) {
-        hamburger.addEventListener('click', () => {
-            hamburger.classList.toggle('aberto');
-            navMenu.classList.toggle('aberto');
-        });
-
-        // Fechar menu ao clicar em um link
-        navMenu.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                hamburger.classList.remove('aberto');
-                navMenu.classList.remove('aberto');
-            });
-        });
-    }
-
-    // Fechar menu se clicar fora
-    document.addEventListener('click', (e) => {
-        if (navMenu && navMenu.classList.contains('aberto') &&
-            !navMenu.contains(e.target) &&
-            !hamburger.contains(e.target)) {
-            hamburger.classList.remove('aberto');
-            navMenu.classList.remove('aberto');
-        }
-    });
 })();
