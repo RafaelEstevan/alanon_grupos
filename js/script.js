@@ -175,153 +175,138 @@
     }
 
     async function abrirModalLocal(local) {
-        const nome = nomeGrupo(local);
-        const badge = `<span class="grupo-badge badge-alanon">Al-Anon</span>`;
-        modalTitulo.textContent = nome;
-        modalBadge.innerHTML = badge;
-        modalCidadeUF.textContent = [local.cidade, local.uf].filter(Boolean).join(' - ');
+    const nome = nomeGrupo(local);
+    const badge = `<span class="grupo-badge badge-alanon">Al-Anon</span>`;
+    modalTitulo.textContent = nome;
+    modalBadge.innerHTML = badge;
+    modalCidadeUF.textContent = [local.cidade, local.uf].filter(Boolean).join(' - ');
 
-        const endereco = montarEnderecoCompleto(local);
-        const endNav = encodeURIComponent(endereco || nome + ' Brasil');
+    const endereco = montarEnderecoCompleto(local);
+    const endNav = encodeURIComponent(endereco || nome + ' Brasil');
 
-        // Montar informações (parte esquerda)
-        let infoHTML = '';
-        if (local.local_funcionamento) {
-            infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Local da Reunião</div>`;
-            infoHTML += linha('🏛️', local.local_funcionamento);
-            infoHTML += `</div>`;
+    // Montar informações (parte esquerda)
+    let infoHTML = '';
+    if (local.local_funcionamento) {
+        infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Local da Reunião</div>`;
+        infoHTML += linha('🏛️', local.local_funcionamento);
+        infoHTML += `</div>`;
+    }
+    if (local.reuniao) {
+        infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">🗓️ Reuniões</div>`;
+        infoHTML += linha('⏰', local.reuniao);
+        infoHTML += `</div>`;
+    }
+    if (local.reuniao_obs && local.reuniao_obs.trim()) {
+        infoHTML += linha('📝', local.reuniao_obs);
+    }
+    if (local.logradouro || local.numero || local.bairro) {
+        infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Endereço</div>`;
+        if (local.logradouro) infoHTML += linha('🏠', `${local.logradouro}${local.numero ? ', ' + local.numero : ''}`);
+        if (local.bairro) infoHTML += linha('🏘️', local.bairro);
+        if (local.cidade && local.uf) infoHTML += linha('🌆', `${local.cidade} - ${local.uf}`);
+        if (local.cep) infoHTML += linha('📮', local.cep);
+        infoHTML += `</div>`;
+    }
+    if (local.ponto_referencia) {
+        infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Ponto de referência</div>`;
+        infoHTML += linha('📍', local.ponto_referencia);
+        infoHTML += `</div>`;
+    }
+    modalInfos.innerHTML = infoHTML;
+
+    // 🔁 ALTERAÇÃO AQUI: Usa grupo_tipo para identificar grupos online
+    const isOnline = local.grupo_tipo === 'Grupo Eletrônico' || local.grupo_tipo === 'Comitê de Área';
+
+    // Elementos do modal
+    const modalMapaWrap = document.querySelector('.modal-mapa-wrap');
+    const modalMapaDiv = document.getElementById('modal-mapa');
+    const modalMapaAcoes = document.getElementById('modal-mapa-acoes');
+
+    if (isOnline) {
+        // --- GRUPO ONLINE (Eletrônico ou Comitê de Área) ---
+        // Esconde o mapa e os botões de navegação
+        if (modalMapaDiv) modalMapaDiv.style.display = 'none';
+        if (modalMapaAcoes) modalMapaAcoes.innerHTML = '';
+
+        // Remove bloco de informações online antigo, se existir
+        let onlineInfoDiv = document.getElementById('online-info-block');
+        if (onlineInfoDiv) onlineInfoDiv.remove();
+
+        // Cria novo bloco de informações online
+        onlineInfoDiv = document.createElement('div');
+        onlineInfoDiv.id = 'online-info-block';
+        onlineInfoDiv.className = 'online-info-block';
+        if (modalMapaWrap) modalMapaWrap.appendChild(onlineInfoDiv);
+
+        let onlineHtml = `<div class="modal-secao"><div class="modal-secao-titulo">🌐 Reunião Online</div>`;
+        if (local.reuniao_url && local.reuniao_url.trim() !== '') {
+            onlineHtml += `<div class="modal-linha"><span class="icone-linha">🔗</span><a href="${esc(local.reuniao_url)}" target="_blank" rel="noopener">Acessar reunião online</a></div>`;
+        } else {
+            onlineHtml += `<div class="modal-linha"><span class="icone-linha">⚠️</span><span>URL de acesso não informada.</span></div>`;
         }
-        if (local.reuniao) {
-            infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">🗓️ Reuniões</div>`;
-            infoHTML += linha('⏰', local.reuniao);
-            infoHTML += `</div>`;
-        }
-        if (local.reuniao_obs && local.reuniao_obs.trim()) {
-            infoHTML += linha('📝', local.reuniao_obs);
-        }
-        if (local.logradouro || local.numero || local.bairro) {
-            infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Endereço</div>`;
-            if (local.logradouro) infoHTML += linha('🏠', `${local.logradouro}${local.numero ? ', ' + local.numero : ''}`);
-            if (local.bairro) infoHTML += linha('🏘️', local.bairro);
-            if (local.cidade && local.uf) infoHTML += linha('🌆', `${local.cidade} - ${local.uf}`);
-            if (local.cep) infoHTML += linha('📮', local.cep);
-            infoHTML += `</div>`;
-        }
-        if (local.ponto_referencia) {
-            infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Ponto de referência</div>`;
-            infoHTML += linha('📍', local.ponto_referencia);
-            infoHTML += `</div>`;
-        }
-        modalInfos.innerHTML = infoHTML;
+        onlineHtml += `</div>`;
+        onlineInfoDiv.innerHTML = onlineHtml;
+        onlineInfoDiv.style.display = 'block';
 
-        // Verifica se é grupo online (situação contém "eletrônico" ou "online")
-        const isOnline = local.situacao && (
-            local.situacao.toLowerCase().includes('eletrônico') ||
-            local.situacao.toLowerCase().includes('online') ||
-            local.situacao.toLowerCase().includes('acolhimento')
-        );
+        // Remove marcador do mapa, se existir
+        if (mapaMarker && mapaLeaflet) mapaLeaflet.removeLayer(mapaMarker);
 
-        // Elementos do modal (CORRIGIDO: usar classe, não id)
-        const modalMapaWrap = document.querySelector('.modal-mapa-wrap');
-        const modalMapaDiv = document.getElementById('modal-mapa');
-        const modalMapaAcoes = document.getElementById('modal-mapa-acoes');
+        abrirModal();
+        setTimeout(() => {
+            if (mapaLeaflet) mapaLeaflet.invalidateSize();
+        }, 120);
+        return;
+    }
 
-        if (isOnline) {
-            // --- GRUPO ONLINE ---
-            // Esconde o mapa
-            if (modalMapaDiv) modalMapaDiv.style.display = 'none';
-            if (modalMapaAcoes) modalMapaAcoes.innerHTML = '';
+    // --- GRUPO PRESENCIAL ---
+    // Garante que o mapa seja exibido e o bloco online seja removido
+    if (modalMapaDiv) modalMapaDiv.style.display = 'block';
+    const onlineBlock = document.getElementById('online-info-block');
+    if (onlineBlock) onlineBlock.style.display = 'none';
 
-            // Cria bloco de informações online dentro do .modal-mapa-wrap
-            let onlineInfoDiv = document.getElementById('online-info-block');
-            if (!onlineInfoDiv && modalMapaWrap) {
-                onlineInfoDiv = document.createElement('div');
-                onlineInfoDiv.id = 'online-info-block';
-                onlineInfoDiv.className = 'online-info-block';
-                modalMapaWrap.appendChild(onlineInfoDiv);
-            }
-
-            if (onlineInfoDiv) {
-                let onlineHtml = `<div class="modal-secao"><div class="modal-secao-titulo">🌐 Reunião Online</div>`;
-                // if (local.reuniao_obs) {
-                //     onlineHtml += `<div class="modal-linha"><span class="icone-linha">📋</span><span>${esc(local.reuniao_obs)}</span></div>`;
-                // }
-                if (local.reuniao_url && local.reuniao_url.trim() !== '') {
-                    onlineHtml += `<div class="modal-linha"><span class="icone-linha">🔗</span><a href="${esc(local.reuniao_url)}" target="_blank" rel="noopener">Acessar reunião online</a></div>`;
-                } else {
-                    onlineHtml += `<div class="modal-linha"><span class="icone-linha">⚠️</span><span>URL de acesso não informada.</span></div>`;
-                }
-                onlineHtml += `</div>`;
-                onlineInfoDiv.innerHTML = onlineHtml;
-                onlineInfoDiv.style.display = 'block';
-            }
-
-            // Botão de acesso na área de ações (opcional)
-            // if (modalMapaAcoes && local.reuniao_url && local.reuniao_url.trim() !== '') {
-            //     modalMapaAcoes.innerHTML = `<a class="btn-mapa-acao google" href="${esc(local.reuniao_url)}" target="_blank" rel="noopener">🎥 Entrar na Reunião Online</a>`;
-            // } else if (modalMapaAcoes) {
-            //     modalMapaAcoes.innerHTML = `<span style="padding:6px 12px; color:#666;">Link não disponível</span>`;
-            // }
-
-            // Remove marcador do mapa, se existir
-            if (mapaMarker && mapaLeaflet) mapaLeaflet.removeLayer(mapaMarker);
-
-            abrirModal();
-            setTimeout(() => {
-                if (mapaLeaflet) mapaLeaflet.invalidateSize();
-            }, 120);
-            return;
-        }
-
-        // --- GRUPO PRESENCIAL ---
-        // Garante que o mapa seja exibido e o bloco online seja removido
-        if (modalMapaDiv) modalMapaDiv.style.display = 'block';
-        const onlineBlock = document.getElementById('online-info-block');
-        if (onlineBlock) onlineBlock.style.display = 'none';
-
-        // Botões de navegação
-        if (modalMapaAcoes) {
-            modalMapaAcoes.innerHTML = `
+    // Botões de navegação (apenas para presenciais)
+    if (modalMapaAcoes) {
+        modalMapaAcoes.innerHTML = `
             <a class="btn-mapa-acao google" href="https://www.google.com/maps/search/?api=1&query=${endNav}" target="_blank" rel="noopener">🗺️ Google Maps</a>
             <a class="btn-mapa-acao waze" href="https://waze.com/ul?q=${endNav}" target="_blank" rel="noopener">🔵 Waze</a>
         `;
-        }
-
-        abrirModal();
-        inicializarMapaSeNecessario();
-        setTimeout(() => mapaLeaflet.invalidateSize(), 120);
-
-        // Busca coordenadas
-        let coords = null;
-        if (local.mapa_latitude && local.mapa_longitude) {
-            coords = { lat: parseFloat(local.mapa_latitude), lng: parseFloat(local.mapa_longitude) };
-        } else {
-            const cached = getCachedCoords(local);
-            if (cached) {
-                coords = cached;
-            } else {
-                const enderecoGeo = [local.logradouro, local.numero, local.bairro, local.cidade, local.uf, 'Brasil'].filter(Boolean).join(', ');
-                coords = await geocodificarEndereco(enderecoGeo);
-                if (coords) setCachedCoords(local, coords);
-            }
-        }
-
-        if (mapaMarker) mapaLeaflet.removeLayer(mapaMarker);
-        if (coords) {
-            mapaLeaflet.setView([coords.lat, coords.lng], 16);
-            mapaMarker = L.marker([coords.lat, coords.lng])
-                .addTo(mapaLeaflet)
-                .bindPopup(`<strong>${esc(nome)}</strong><br>${esc(endereco)}`)
-                .openPopup();
-        } else {
-            mapaLeaflet.setView([-15.78, -47.93], 5);
-            mapaMarker = L.marker([-15.78, -47.93])
-                .addTo(mapaLeaflet)
-                .bindPopup(`⚠️ Endereço não localizado no mapa.<br>Use os botões abaixo para navegar.`)
-                .openPopup();
-        }
-        setTimeout(() => mapaLeaflet.invalidateSize(), 150);
     }
+
+    abrirModal();
+    inicializarMapaSeNecessario();
+    setTimeout(() => mapaLeaflet.invalidateSize(), 120);
+
+    // Busca coordenadas
+    let coords = null;
+    if (local.mapa_latitude && local.mapa_longitude) {
+        coords = { lat: parseFloat(local.mapa_latitude), lng: parseFloat(local.mapa_longitude) };
+    } else {
+        const cached = getCachedCoords(local);
+        if (cached) {
+            coords = cached;
+        } else {
+            const enderecoGeo = [local.logradouro, local.numero, local.bairro, local.cidade, local.uf, 'Brasil'].filter(Boolean).join(', ');
+            coords = await geocodificarEndereco(enderecoGeo);
+            if (coords) setCachedCoords(local, coords);
+        }
+    }
+
+    if (mapaMarker) mapaLeaflet.removeLayer(mapaMarker);
+    if (coords) {
+        mapaLeaflet.setView([coords.lat, coords.lng], 16);
+        mapaMarker = L.marker([coords.lat, coords.lng])
+            .addTo(mapaLeaflet)
+            .bindPopup(`<strong>${esc(nome)}</strong><br>${esc(endereco)}`)
+            .openPopup();
+    } else {
+        mapaLeaflet.setView([-15.78, -47.93], 5);
+        mapaMarker = L.marker([-15.78, -47.93])
+            .addTo(mapaLeaflet)
+            .bindPopup(`⚠️ Endereço não localizado no mapa.<br>Use os botões abaixo para navegar.`)
+            .openPopup();
+    }
+    setTimeout(() => mapaLeaflet.invalidateSize(), 150);
+}
 
     function linha(icone, texto) {
         return `<div class="modal-linha"><span class="icone-linha">${icone}</span><span>${esc(texto)}</span></div>`;
@@ -338,7 +323,6 @@
     todosLocais = json.data.filter(local => local.situacao === 'Aberto');
     return todosLocais;
 }
-
     function tipoGrupo(local) {
         return 'alanon';
     }
@@ -401,82 +385,81 @@
     }
 
     // ========== NOVAS FUNÇÕES PARA EXIBIR POR SITUAÇÃO ==========
-    function abrirPorSituacao(situacao, titulo) {
-        if (!todosLocais) {
-            carregarDados().then(() => {
-                abrirPorSituacao(situacao, titulo);
-            }).catch(err => {
-                alert('Erro ao carregar dados: ' + err.message);
-            });
-            return;
-        }
-
-        const filtrados = todosLocais.filter(local => local.situacao === situacao);
-        if (filtrados.length === 0) {
-            alert(`Nenhum grupo encontrado com situação = "${situacao}".`);
-            return;
-        }
-
-        modoSituacaoAtivo = true;
-        situacaoFiltro = situacao;
-        ufAtiva = null;
-
-        tituloEl.textContent = titulo;
-        bandeiraEl.src = '';
-        bandeiraEl.style.display = 'none';
-
-        // Oculta os filtros de tipo (Al-Anon/Alateen) e mantém a busca
-        const painelFiltros = document.querySelector('.painel-filtros');
-        if (painelFiltros) painelFiltros.style.display = 'none';
-
-        locaisDoEstado = filtrados;
-        filtroAtivo = 'todos';
-        renderizarPorSituacao();
-
-        abrirPainel();
+    function abrirPorTipoGrupo(tipo, titulo) {
+    if (!todosLocais) {
+        carregarDados().then(() => {
+            abrirPorTipoGrupo(tipo, titulo);
+        }).catch(err => {
+            alert('Erro ao carregar dados: ' + err.message);
+        });
+        return;
     }
 
-    function renderizarPorSituacao() {
-        const busca = buscaEl.value.trim().toLowerCase();
-        let filtrados = locaisDoEstado;
-        if (busca) {
-            filtrados = filtrados.filter(local => {
-                const haystack = [nomeGrupo(local), local.local_funcionamento, local.cidade, local.bairro, local.logradouro].join(' ').toLowerCase();
-                return haystack.includes(busca);
-            });
-        }
-        contadorEl.textContent = filtrados.length === 0 ? 'Nenhum local encontrado.' : `${filtrados.length} local${filtrados.length > 1 ? 's' : ''} encontrado${filtrados.length > 1 ? 's' : ''}.`;
-        if (filtrados.length === 0) {
-            listaEl.innerHTML = `<div class="estado-msg"><div class="icone">🔍</div><p>Nenhum grupo com situação "${situacaoFiltro}"<br>${busca ? 'para a busca "' + esc(busca) + '"' : ''}</p></div>`;
-            return;
-        }
-        listaEl.innerHTML = filtrados.map((local, idx) => {
-            const badge = badgeGrupo('alanon');
-            const endereco = [local.logradouro, local.numero, local.bairro].filter(Boolean).join(', ');
-            const cidadeUF = [local.cidade, local.uf].filter(Boolean).join(' - ');
-            return `
-                <div class="grupo-card" data-situacao-idx="${idx}" tabindex="0" role="button">
-                    <div class="grupo-card-topo">
-                        <div class="grupo-nome">${esc(nomeGrupo(local))}</div>
-                        ${badge}
-                    </div>
-                    <div class="grupo-info">
-                        ${local.local_funcionamento ? `<span><span class="rotulo">Local:</span> ${esc(local.local_funcionamento)}</span>` : ''}
-                        ${endereco ? `<span><span class="rotulo">Endereço:</span> ${esc(endereco)}</span>` : ''}
-                        ${cidadeUF ? `<span><span class="rotulo">Cidade:</span> ${esc(cidadeUF)}</span>` : ''}
-                    </div>
-                    <div class="hint-clique">🔍 Clique para ver detalhes e localização</div>
-                </div>`;
-        }).join('');
-        listaEl.querySelectorAll('.grupo-card').forEach(card => {
-            const idx = parseInt(card.dataset.situacaoIdx);
-            const handler = () => {
-                abrirModalLocal(filtrados[idx]);
-            };
-            card.addEventListener('click', handler);
-            card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
+    const filtrados = todosLocais.filter(local => local.grupo_tipo === tipo);
+    if (filtrados.length === 0) {
+        alert(`Nenhum grupo encontrado com tipo = "${tipo}".`);
+        return;
+    }
+
+    modoSituacaoAtivo = true;
+    situacaoFiltro = tipo;   // agora armazena o tipo
+    ufAtiva = null;
+
+    tituloEl.textContent = titulo;
+    bandeiraEl.src = '';
+    bandeiraEl.style.display = 'none';
+
+    const painelFiltros = document.querySelector('.painel-filtros');
+    if (painelFiltros) painelFiltros.style.display = 'none';
+
+    locaisDoEstado = filtrados;
+    filtroAtivo = 'todos';
+    renderizarPorTipo();
+
+    abrirPainel();
+}
+
+    function renderizarPorTipo() {
+    const busca = buscaEl.value.trim().toLowerCase();
+    let filtrados = locaisDoEstado;
+    if (busca) {
+        filtrados = filtrados.filter(local => {
+            const haystack = [nomeGrupo(local), local.local_funcionamento, local.cidade, local.bairro, local.logradouro].join(' ').toLowerCase();
+            return haystack.includes(busca);
         });
     }
+    contadorEl.textContent = filtrados.length === 0 ? 'Nenhum local encontrado.' : `${filtrados.length} local${filtrados.length > 1 ? 's' : ''} encontrado${filtrados.length > 1 ? 's' : ''}.`;
+    if (filtrados.length === 0) {
+        listaEl.innerHTML = `<div class="estado-msg"><div class="icone">🔍</div><p>Nenhum grupo do tipo "${situacaoFiltro}"<br>${busca ? 'para a busca "' + esc(busca) + '"' : ''}</p></div>`;
+        return;
+    }
+    listaEl.innerHTML = filtrados.map((local, idx) => {
+        const badge = badgeGrupo('alanon');
+        const endereco = [local.logradouro, local.numero, local.bairro].filter(Boolean).join(', ');
+        const cidadeUF = [local.cidade, local.uf].filter(Boolean).join(' - ');
+        return `
+            <div class="grupo-card" data-tipo-idx="${idx}" tabindex="0" role="button">
+                <div class="grupo-card-topo">
+                    <div class="grupo-nome">${esc(nomeGrupo(local))}</div>
+                    ${badge}
+                </div>
+                <div class="grupo-info">
+                    ${local.local_funcionamento ? `<span><span class="rotulo">Local:</span> ${esc(local.local_funcionamento)}</span>` : ''}
+                    ${endereco ? `<span><span class="rotulo">Endereço:</span> ${esc(endereco)}</span>` : ''}
+                    ${cidadeUF ? `<span><span class="rotulo">Cidade:</span> ${esc(cidadeUF)}</span>` : ''}
+                </div>
+                <div class="hint-clique">🔍 Clique para ver detalhes e localização</div>
+            </div>`;
+    }).join('');
+    listaEl.querySelectorAll('.grupo-card').forEach(card => {
+        const idx = parseInt(card.dataset.tipoIdx);
+        const handler = () => {
+            abrirModalLocal(filtrados[idx]);
+        };
+        card.addEventListener('click', handler);
+        card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
+    });
+}
 
     // Sobrescreve a função fecharPainel para restaurar o modo normal
     fecharPainel = function () {
@@ -752,21 +735,17 @@
     const btnEletronicos = document.getElementById('btn-grupos-eletronicos');
     const btnAcolhimento = document.getElementById('btn-acolhimento');
 
-    if (btnEletronicos) {
-        btnEletronicos.addEventListener('click', (e) => {
-            e.preventDefault();
-            abrirPorSituacao('Grupo Eletrônico');
-        });
-    } else {
-        console.warn('Elemento #btn-grupos-eletronicos não encontrado. Adicione o ID ao botão.');
-    }
+if (btnEletronicos) {
+    btnEletronicos.addEventListener('click', (e) => {
+        e.preventDefault();
+        abrirPorTipoGrupo('Grupo Eletrônico', 'Grupos Eletrônicos');
+    });
+}
 
-    if (btnAcolhimento) {
-        btnAcolhimento.addEventListener('click', (e) => {
-            e.preventDefault();
-            abrirPorSituacao('Sala de Acolhimento');
-        });
-    } else {
-        console.warn('Elemento #btn-acolhimento não encontrado. Adicione o ID ao botão.');
-    }
+if (btnAcolhimento) {
+    btnAcolhimento.addEventListener('click', (e) => {
+        e.preventDefault();
+        abrirPorTipoGrupo('Comitê de Área', 'Comitês de Área');
+    });
+}
 })();
