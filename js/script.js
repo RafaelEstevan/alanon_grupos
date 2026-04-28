@@ -1,6 +1,6 @@
 (() => {
     // ========== CONFIGURAÇÃO ==========
-    const API_URL = 'https://al-anon.org.br/api/enderecos.php';
+    const API_URL = 'https://al-anon.org.br/api/cadastro_grupos.php';
     const LOCATIONIQ_KEY = 'pk.e0313d2db1366ca073ba2189fc75d981'; // Substitua se necessário
     const CACHE_KEY = 'alanon_enderecos_coords';
     const CACHE_VERSION = 'v2';
@@ -43,9 +43,9 @@
     const pesquisaInput = document.getElementById('pesquisa-input');
     const pesquisaResultados = document.getElementById('pesquisa-resultados');
 
-    // ========== NOVAS VARIÁVEIS PARA MODO SITUAÇÃO ==========
-    let modoSituacaoAtivo = false;
-    let situacaoFiltro = null;
+    // ========== VARIÁVEIS PARA MODO TIPO ==========
+    let modoTipoAtivo = false;
+    let tipoFiltro = null; // 'Al-Anon', 'Alateen', 'Grupo Eletrônico'
 
     // ========== FUNÇÕES AUXILIARES ==========
     function esc(str) {
@@ -54,7 +54,7 @@
     }
 
     function nomeGrupo(local) {
-        return local.nome || 'Grupo sem nome';
+        return local.gr_nome || 'Grupo sem nome';
     }
 
     // ========== GEOCODIFICAÇÃO (LocationIQ) ==========
@@ -96,7 +96,7 @@
             if (!cache) return null;
             const data = JSON.parse(cache);
             if (data.version !== CACHE_VERSION) return null;
-            const key = local.id_endereco ? `id_${local.id_endereco}` : local.local_funcionamento.replace(/\s/g, '_');
+            const key = local.codigo ? `id_${local.codigo}` : local.gr_local?.replace(/\s/g, '_');
             if (data.coords[key] && data.coords[key].expires > Date.now()) {
                 return data.coords[key].coords;
             }
@@ -109,7 +109,7 @@
             let cache = localStorage.getItem(CACHE_KEY);
             let data = cache ? JSON.parse(cache) : { version: CACHE_VERSION, coords: {} };
             if (data.version !== CACHE_VERSION) data = { version: CACHE_VERSION, coords: {} };
-            const key = local.id_endereco ? `id_${local.id_endereco}` : local.local_funcionamento.replace(/\s/g, '_');
+            const key = local.codigo ? `id_${local.codigo}` : local.gr_local?.replace(/\s/g, '_');
             data.coords[key] = {
                 coords: coords,
                 expires: Date.now() + 7 * 24 * 60 * 60 * 1000
@@ -120,18 +120,18 @@
 
     function montarEnderecoCompleto(local) {
         const partes = [];
-        if (local.logradouro) partes.push(local.logradouro);
-        if (local.numero) partes.push(local.numero);
-        if (local.complemento) partes.push(local.complemento);
-        if (local.bairro) partes.push(local.bairro);
-        if (local.cidade) partes.push(local.cidade);
-        if (local.uf) partes.push(local.uf);
-        if (local.cep) partes.push(local.cep);
+        if (local.gr_endereco) partes.push(local.gr_endereco);
+        if (local.gr_numero) partes.push(local.gr_numero);
+        if (local.gr_complemento) partes.push(local.gr_complemento);
+        if (local.gr_bairro) partes.push(local.gr_bairro);
+        if (local.gr_cidade) partes.push(local.gr_cidade);
+        if (local.gr_uf) partes.push(local.gr_uf);
+        if (local.gr_cep) partes.push(local.gr_cep);
         partes.push('Brasil');
         return partes.join(', ');
     }
 
-    // ========== PAINEL LATERAL (original) ==========
+    // ========== PAINEL LATERAL ==========
     function abrirPainel() {
         overlay.style.display = 'block';
         painel.classList.add('aberto');
@@ -139,7 +139,6 @@
         buscaEl.focus();
     }
 
-    // Será sobrescrita para tratar o fechamento no modo situação
     function fecharPainelOriginal() {
         painel.classList.remove('aberto');
         overlay.style.display = 'none';
@@ -175,138 +174,151 @@
     }
 
     async function abrirModalLocal(local) {
-    const nome = nomeGrupo(local);
-    const badge = `<span class="grupo-badge badge-alanon">Al-Anon</span>`;
-    modalTitulo.textContent = nome;
-    modalBadge.innerHTML = badge;
-    modalCidadeUF.textContent = [local.cidade, local.uf].filter(Boolean).join(' - ');
+        const nome = nomeGrupo(local);
+        // Define o badge baseado no grupo_tipo (mapeando para os três tipos)
+        let badgeHtml = '';
+        if (local.grupo_tipo === 'Al-Anon') badgeHtml = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
+        else if (local.grupo_tipo === 'Alateen') badgeHtml = '<span class="grupo-badge badge-alateen">Alateen</span>';
+        else if (local.grupo_tipo === 'Eletrônico') badgeHtml = '<span class="grupo-badge badge-eletronico">Eletrônico</span>';
+        else badgeHtml = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
+        
+        modalTitulo.textContent = nome;
+        modalBadge.innerHTML = badgeHtml;
+        modalCidadeUF.textContent = [local.gr_cidade, local.gr_uf].filter(Boolean).join(' - ');
 
-    const endereco = montarEnderecoCompleto(local);
-    const endNav = encodeURIComponent(endereco || nome + ' Brasil');
+        const endereco = montarEnderecoCompleto(local);
+        const endNav = encodeURIComponent(endereco || nome + ' Brasil');
 
-    // Montar informações (parte esquerda)
-    let infoHTML = '';
-    if (local.local_funcionamento) {
-        infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Local da Reunião</div>`;
-        infoHTML += linha('🏛️', local.local_funcionamento);
-        infoHTML += `</div>`;
-    }
-    if (local.reuniao) {
-        infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">🗓️ Reuniões</div>`;
-        infoHTML += linha('⏰', local.reuniao);
-        infoHTML += `</div>`;
-    }
-    if (local.reuniao_obs && local.reuniao_obs.trim()) {
-        infoHTML += linha('📝', local.reuniao_obs);
-    }
-    if (local.logradouro || local.numero || local.bairro) {
-        infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Endereço</div>`;
-        if (local.logradouro) infoHTML += linha('🏠', `${local.logradouro}${local.numero ? ', ' + local.numero : ''}`);
-        if (local.bairro) infoHTML += linha('🏘️', local.bairro);
-        if (local.cidade && local.uf) infoHTML += linha('🌆', `${local.cidade} - ${local.uf}`);
-        if (local.cep) infoHTML += linha('📮', local.cep);
-        infoHTML += `</div>`;
-    }
-    if (local.ponto_referencia) {
-        infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Ponto de referência</div>`;
-        infoHTML += linha('📍', local.ponto_referencia);
-        infoHTML += `</div>`;
-    }
-    modalInfos.innerHTML = infoHTML;
-
-    // 🔁 ALTERAÇÃO AQUI: Usa grupo_tipo para identificar grupos online
-    const isOnline = local.grupo_tipo === 'Grupo Eletrônico' || local.grupo_tipo === 'Comitê de Área';
-
-    // Elementos do modal
-    const modalMapaWrap = document.querySelector('.modal-mapa-wrap');
-    const modalMapaDiv = document.getElementById('modal-mapa');
-    const modalMapaAcoes = document.getElementById('modal-mapa-acoes');
-
-    if (isOnline) {
-        // --- GRUPO ONLINE (Eletrônico ou Comitê de Área) ---
-        // Esconde o mapa e os botões de navegação
-        if (modalMapaDiv) modalMapaDiv.style.display = 'none';
-        if (modalMapaAcoes) modalMapaAcoes.innerHTML = '';
-
-        // Remove bloco de informações online antigo, se existir
-        let onlineInfoDiv = document.getElementById('online-info-block');
-        if (onlineInfoDiv) onlineInfoDiv.remove();
-
-        // Cria novo bloco de informações online
-        onlineInfoDiv = document.createElement('div');
-        onlineInfoDiv.id = 'online-info-block';
-        onlineInfoDiv.className = 'online-info-block';
-        if (modalMapaWrap) modalMapaWrap.appendChild(onlineInfoDiv);
-
-        let onlineHtml = `<div class="modal-secao"><div class="modal-secao-titulo">🌐 Reunião Online</div>`;
-        if (local.reuniao_url && local.reuniao_url.trim() !== '') {
-            onlineHtml += `<div class="modal-linha"><span class="icone-linha">🔗</span><a href="${esc(local.reuniao_url)}" target="_blank" rel="noopener">Acessar reunião online</a></div>`;
-        } else {
-            onlineHtml += `<div class="modal-linha"><span class="icone-linha">⚠️</span><span>URL de acesso não informada.</span></div>`;
+        // Montar informações (parte esquerda)
+        let infoHTML = '';
+        if (local.gr_local) {
+            infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Local da Reunião</div>`;
+            infoHTML += linha('🏛️', local.gr_local);
+            infoHTML += `</div>`;
         }
-        onlineHtml += `</div>`;
-        onlineInfoDiv.innerHTML = onlineHtml;
-        onlineInfoDiv.style.display = 'block';
+        // Exibe descrição livre da reunião (gr_reuniao) e também a estruturada (reuniao)
+        let reuniaoText = '';
+        if (local.gr_reuniao && local.gr_reuniao.trim()) reuniaoText += local.gr_reuniao.trim();
+        if (local.reuniao && local.reuniao.trim()) {
+            if (reuniaoText) reuniaoText += ' | ';
+            reuniaoText += local.reuniao.trim();
+        }
+        if (reuniaoText) {
+            infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">🗓️ Reuniões</div>`;
+            infoHTML += linha('⏰', reuniaoText);
+            infoHTML += `</div>`;
+        }
+        if (local.reuniao_obs && local.reuniao_obs.trim()) {
+            infoHTML += linha('📝', local.reuniao_obs);
+        }
+        if (local.gr_endereco || local.gr_numero || local.gr_bairro) {
+            infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Endereço</div>`;
+            if (local.gr_endereco) infoHTML += linha('🏠', `${local.gr_endereco}${local.gr_numero ? ', ' + local.gr_numero : ''}`);
+            if (local.gr_bairro) infoHTML += linha('🏘️', local.gr_bairro);
+            if (local.gr_cidade && local.gr_uf) infoHTML += linha('🌆', `${local.gr_cidade} - ${local.gr_uf}`);
+            if (local.gr_cep) infoHTML += linha('📮', local.gr_cep);
+            infoHTML += `</div>`;
+        }
+        // Contatos
+        if (local.gr_email || local.gr_telefone || local.gr_celular) {
+            infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">📞 Contatos</div>`;
+            if (local.gr_email) infoHTML += linha('✉️', `<a href="mailto:${local.gr_email}">${local.gr_email}</a>`);
+            if (local.gr_telefone) infoHTML += linha('📞', local.gr_telefone);
+            if (local.gr_celular) infoHTML += linha('📱', local.gr_celular);
+            infoHTML += `</div>`;
+        }
+        if (local.gr_c_nome || local.gr_c_endereco) {
+            infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">📬 Correspondência</div>`;
+            if (local.gr_c_nome) infoHTML += linha('👤', local.gr_c_nome);
+            if (local.gr_c_endereco) infoHTML += linha('🏠', `${local.gr_c_endereco}${local.gr_c_numero ? ', ' + local.gr_c_numero : ''}`);
+            if (local.gr_c_cidade && local.gr_c_uf) infoHTML += linha('🌆', `${local.gr_c_cidade} - ${local.gr_c_uf}`);
+            infoHTML += `</div>`;
+        }
+        modalInfos.innerHTML = infoHTML;
 
-        // Remove marcador do mapa, se existir
-        if (mapaMarker && mapaLeaflet) mapaLeaflet.removeLayer(mapaMarker);
+        const isOnline = local.grupo_tipo === 'Eletrônico';
+
+        const modalMapaWrap = document.querySelector('.modal-mapa-wrap');
+        const modalMapaDiv = document.getElementById('modal-mapa');
+        const modalMapaAcoes = document.getElementById('modal-mapa-acoes');
+
+        if (isOnline) {
+            if (modalMapaDiv) modalMapaDiv.style.display = 'none';
+            if (modalMapaAcoes) modalMapaAcoes.innerHTML = '';
+
+            let onlineInfoDiv = document.getElementById('online-info-block');
+            if (onlineInfoDiv) onlineInfoDiv.remove();
+
+            onlineInfoDiv = document.createElement('div');
+            onlineInfoDiv.id = 'online-info-block';
+            onlineInfoDiv.className = 'online-info-block';
+            if (modalMapaWrap) modalMapaWrap.appendChild(onlineInfoDiv);
+
+            let onlineHtml = `<div class="modal-secao"><div class="modal-secao-titulo">🌐 Reunião Online</div>`;
+            if (local.reuniao_url && local.reuniao_url.trim() !== '') {
+                onlineHtml += `<div class="modal-linha"><span class="icone-linha">🔗</span><a href="${esc(local.reuniao_url)}" target="_blank" rel="noopener">Acessar reunião online</a></div>`;
+            } else {
+                onlineHtml += `<div class="modal-linha"><span class="icone-linha">⚠️</span><span>URL de acesso não informada.</span></div>`;
+            }
+            onlineHtml += `</div>`;
+            onlineInfoDiv.innerHTML = onlineHtml;
+            onlineInfoDiv.style.display = 'block';
+
+            if (mapaMarker && mapaLeaflet) mapaLeaflet.removeLayer(mapaMarker);
+
+            abrirModal();
+            setTimeout(() => {
+                if (mapaLeaflet) mapaLeaflet.invalidateSize();
+            }, 120);
+            return;
+        }
+
+        // Grupo presencial
+        if (modalMapaDiv) modalMapaDiv.style.display = 'block';
+        const onlineBlock = document.getElementById('online-info-block');
+        if (onlineBlock) onlineBlock.style.display = 'none';
+
+        if (modalMapaAcoes) {
+            modalMapaAcoes.innerHTML = `
+                <a class="btn-mapa-acao google" href="https://www.google.com/maps/search/?api=1&query=${endNav}" target="_blank" rel="noopener">🗺️ Google Maps</a>
+                <a class="btn-mapa-acao waze" href="https://waze.com/ul?q=${endNav}" target="_blank" rel="noopener">🔵 Waze</a>
+            `;
+        }
 
         abrirModal();
-        setTimeout(() => {
-            if (mapaLeaflet) mapaLeaflet.invalidateSize();
-        }, 120);
-        return;
-    }
+        inicializarMapaSeNecessario();
+        setTimeout(() => mapaLeaflet.invalidateSize(), 120);
 
-    // --- GRUPO PRESENCIAL ---
-    // Garante que o mapa seja exibido e o bloco online seja removido
-    if (modalMapaDiv) modalMapaDiv.style.display = 'block';
-    const onlineBlock = document.getElementById('online-info-block');
-    if (onlineBlock) onlineBlock.style.display = 'none';
-
-    // Botões de navegação (apenas para presenciais)
-    if (modalMapaAcoes) {
-        modalMapaAcoes.innerHTML = `
-            <a class="btn-mapa-acao google" href="https://www.google.com/maps/search/?api=1&query=${endNav}" target="_blank" rel="noopener">🗺️ Google Maps</a>
-            <a class="btn-mapa-acao waze" href="https://waze.com/ul?q=${endNav}" target="_blank" rel="noopener">🔵 Waze</a>
-        `;
-    }
-
-    abrirModal();
-    inicializarMapaSeNecessario();
-    setTimeout(() => mapaLeaflet.invalidateSize(), 120);
-
-    // Busca coordenadas
-    let coords = null;
-    if (local.mapa_latitude && local.mapa_longitude) {
-        coords = { lat: parseFloat(local.mapa_latitude), lng: parseFloat(local.mapa_longitude) };
-    } else {
-        const cached = getCachedCoords(local);
-        if (cached) {
-            coords = cached;
+        let coords = null;
+        if (local.mapa_latitude && local.mapa_longitude) {
+            coords = { lat: parseFloat(local.mapa_latitude), lng: parseFloat(local.mapa_longitude) };
         } else {
-            const enderecoGeo = [local.logradouro, local.numero, local.bairro, local.cidade, local.uf, 'Brasil'].filter(Boolean).join(', ');
-            coords = await geocodificarEndereco(enderecoGeo);
-            if (coords) setCachedCoords(local, coords);
+            const cached = getCachedCoords(local);
+            if (cached) {
+                coords = cached;
+            } else {
+                const enderecoGeo = [local.gr_endereco, local.gr_numero, local.gr_bairro, local.gr_cidade, local.gr_uf, 'Brasil'].filter(Boolean).join(', ');
+                coords = await geocodificarEndereco(enderecoGeo);
+                if (coords) setCachedCoords(local, coords);
+            }
         }
-    }
 
-    if (mapaMarker) mapaLeaflet.removeLayer(mapaMarker);
-    if (coords) {
-        mapaLeaflet.setView([coords.lat, coords.lng], 16);
-        mapaMarker = L.marker([coords.lat, coords.lng])
-            .addTo(mapaLeaflet)
-            .bindPopup(`<strong>${esc(nome)}</strong><br>${esc(endereco)}`)
-            .openPopup();
-    } else {
-        mapaLeaflet.setView([-15.78, -47.93], 5);
-        mapaMarker = L.marker([-15.78, -47.93])
-            .addTo(mapaLeaflet)
-            .bindPopup(`⚠️ Endereço não localizado no mapa.<br>Use os botões abaixo para navegar.`)
-            .openPopup();
+        if (mapaMarker) mapaLeaflet.removeLayer(mapaMarker);
+        if (coords) {
+            mapaLeaflet.setView([coords.lat, coords.lng], 16);
+            mapaMarker = L.marker([coords.lat, coords.lng])
+                .addTo(mapaLeaflet)
+                .bindPopup(`<strong>${esc(nome)}</strong><br>${esc(endereco)}`)
+                .openPopup();
+        } else {
+            mapaLeaflet.setView([-15.78, -47.93], 5);
+            mapaMarker = L.marker([-15.78, -47.93])
+                .addTo(mapaLeaflet)
+                .bindPopup(`⚠️ Endereço não localizado no mapa.<br>Use os botões abaixo para navegar.`)
+                .openPopup();
+        }
+        setTimeout(() => mapaLeaflet.invalidateSize(), 150);
     }
-    setTimeout(() => mapaLeaflet.invalidateSize(), 150);
-}
 
     function linha(icone, texto) {
         return `<div class="modal-linha"><span class="icone-linha">${icone}</span><span>${esc(texto)}</span></div>`;
@@ -314,43 +326,51 @@
 
     // ========== CARREGAR DADOS DA API ==========
     async function carregarDados() {
-    if (todosLocais !== null) return todosLocais;
-    const resp = await fetch(API_URL);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const json = await resp.json();
-    if (!json.success) throw new Error(json.message || 'Erro desconhecido');
-    // FILTRA APENAS OS GRUPOS COM situacao = 'Aberto'
-    todosLocais = json.data.filter(local => local.situacao === 'Aberto');
-    return todosLocais;
-}
-    function tipoGrupo(local) {
-        return 'alanon';
-    }
-
-    function badgeGrupo(tipo) {
-        return `<span class="grupo-badge badge-alanon">Al-Anon</span>`;
+        if (todosLocais !== null) return todosLocais;
+        const resp = await fetch(API_URL);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const json = await resp.json();
+        if (!json.success) throw new Error(json.message || 'Erro desconhecido');
+        // Filtra apenas registros com situacao = 'Aberto'
+        todosLocais = json.data.filter(local => local.situacao === 'Aberto');
+        return todosLocais;
     }
 
     // ========== RENDERIZAÇÃO ORIGINAL (por estado) ==========
     function renderizar() {
         const busca = buscaEl.value.trim().toLowerCase();
-        const filtrados = locaisDoEstado.filter(local => {
-            if (filtroAtivo !== 'todos' && tipoGrupo(local) !== filtroAtivo) return false;
-            if (busca) {
-                const haystack = [nomeGrupo(local), local.local_funcionamento, local.cidade, local.bairro, local.logradouro].join(' ').toLowerCase();
-                if (!haystack.includes(busca)) return false;
-            }
-            return true;
-        });
+        let filtrados = locaisDoEstado;
+        if (filtroAtivo !== 'todos') {
+            filtrados = filtrados.filter(local => local.grupo_tipo === filtroAtivo);
+        }
+        if (busca) {
+            filtrados = filtrados.filter(local => {
+                const haystack = [
+                    nomeGrupo(local),
+                    local.gr_local,
+                    local.gr_cidade,
+                    local.gr_bairro,
+                    local.gr_endereco,
+                    local.gr_telefone,
+                    local.gr_celular,
+                    local.gr_email
+                ].join(' ').toLowerCase();
+                return haystack.includes(busca);
+            });
+        }
         contadorEl.textContent = filtrados.length === 0 ? 'Nenhum local encontrado.' : `${filtrados.length} local${filtrados.length > 1 ? 's' : ''} encontrado${filtrados.length > 1 ? 's' : ''}.`;
         if (filtrados.length === 0) {
             listaEl.innerHTML = `<div class="estado-msg"><div class="icone">🔍</div><p>Nenhum local encontrado<br>com esses filtros.</p></div>`;
             return;
         }
         listaEl.innerHTML = filtrados.map((local, idx) => {
-            const badge = badgeGrupo('alanon');
-            const endereco = [local.logradouro, local.numero, local.bairro].filter(Boolean).join(', ');
-            const cidadeUF = [local.cidade, local.uf].filter(Boolean).join(' - ');
+            let badge = '';
+            if (local.grupo_tipo === 'Al-Anon') badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
+            else if (local.grupo_tipo === 'Alateen') badge = '<span class="grupo-badge badge-alateen">Alateen</span>';
+            else if (local.grupo_tipo === 'Eletrônico') badge = '<span class="grupo-badge badge-eletronico">Eletrônico</span>';
+            else badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
+            const endereco = [local.gr_endereco, local.gr_numero, local.gr_bairro].filter(Boolean).join(', ');
+            const cidadeUF = [local.gr_cidade, local.gr_uf].filter(Boolean).join(' - ');
             return `
                 <div class="grupo-card" data-idx="${idx}" tabindex="0" role="button">
                     <div class="grupo-card-topo">
@@ -358,9 +378,11 @@
                         ${badge}
                     </div>
                     <div class="grupo-info">
-                        ${local.local_funcionamento ? `<span><span class="rotulo">Local:</span> ${esc(local.local_funcionamento)}</span>` : ''}
+                        ${local.gr_local ? `<span><span class="rotulo">Local:</span> ${esc(local.gr_local)}</span>` : ''}
                         ${endereco ? `<span><span class="rotulo">Endereço:</span> ${esc(endereco)}</span>` : ''}
                         ${cidadeUF ? `<span><span class="rotulo">Cidade:</span> ${esc(cidadeUF)}</span>` : ''}
+                        ${local.gr_telefone ? `<span><span class="rotulo">Telefone:</span> ${esc(local.gr_telefone)}</span>` : ''}
+                        ${local.gr_celular ? `<span><span class="rotulo">Celular:</span> ${esc(local.gr_celular)}</span>` : ''}
                     </div>
                     <div class="hint-clique">🔍 Clique para ver detalhes e localização</div>
                 </div>`;
@@ -369,14 +391,9 @@
             const idx = parseInt(card.dataset.idx);
             const handler = () => {
                 const busca2 = buscaEl.value.trim().toLowerCase();
-                const filtrados2 = locaisDoEstado.filter(local => {
-                    if (filtroAtivo !== 'todos' && tipoGrupo(local) !== filtroAtivo) return false;
-                    if (busca2) {
-                        const haystack = [nomeGrupo(local), local.local_funcionamento, local.cidade, local.bairro, local.logradouro].join(' ').toLowerCase();
-                        if (!haystack.includes(busca2)) return false;
-                    }
-                    return true;
-                });
+                let filtrados2 = locaisDoEstado;
+                if (filtroAtivo !== 'todos') filtrados2 = filtrados2.filter(l => l.grupo_tipo === filtroAtivo);
+                if (busca2) filtrados2 = filtrados2.filter(l => [nomeGrupo(l), l.gr_local, l.gr_cidade, l.gr_bairro, l.gr_endereco].join(' ').toLowerCase().includes(busca2));
                 if (filtrados2[idx]) abrirModalLocal(filtrados2[idx]);
             };
             card.addEventListener('click', handler);
@@ -384,88 +401,94 @@
         });
     }
 
-    // ========== NOVAS FUNÇÕES PARA EXIBIR POR SITUAÇÃO ==========
+    // ========== FUNÇÕES PARA EXIBIR POR TIPO ==========
     function abrirPorTipoGrupo(tipo, titulo) {
-    if (!todosLocais) {
-        carregarDados().then(() => {
-            abrirPorTipoGrupo(tipo, titulo);
-        }).catch(err => {
-            alert('Erro ao carregar dados: ' + err.message);
-        });
-        return;
+        if (!todosLocais) {
+            carregarDados().then(() => {
+                abrirPorTipoGrupo(tipo, titulo);
+            }).catch(err => {
+                alert('Erro ao carregar dados: ' + err.message);
+            });
+            return;
+        }
+
+        const filtrados = todosLocais.filter(local => local.grupo_tipo === tipo);
+        if (filtrados.length === 0) {
+            alert(`Nenhum grupo encontrado com tipo = "${tipo}".`);
+            return;
+        }
+
+        modoTipoAtivo = true;
+        tipoFiltro = tipo;
+        ufAtiva = null;
+
+        tituloEl.textContent = titulo;
+        bandeiraEl.src = '';
+        bandeiraEl.style.display = 'none';
+
+        const painelFiltros = document.querySelector('.painel-filtros');
+        if (painelFiltros) painelFiltros.style.display = 'none';
+
+        locaisDoEstado = filtrados;
+        filtroAtivo = 'todos';
+        renderizarPorTipo();
+
+        abrirPainel();
     }
-
-    const filtrados = todosLocais.filter(local => local.grupo_tipo === tipo);
-    if (filtrados.length === 0) {
-        alert(`Nenhum grupo encontrado com tipo = "${tipo}".`);
-        return;
-    }
-
-    modoSituacaoAtivo = true;
-    situacaoFiltro = tipo;   // agora armazena o tipo
-    ufAtiva = null;
-
-    tituloEl.textContent = titulo;
-    bandeiraEl.src = '';
-    bandeiraEl.style.display = 'none';
-
-    const painelFiltros = document.querySelector('.painel-filtros');
-    if (painelFiltros) painelFiltros.style.display = 'none';
-
-    locaisDoEstado = filtrados;
-    filtroAtivo = 'todos';
-    renderizarPorTipo();
-
-    abrirPainel();
-}
 
     function renderizarPorTipo() {
-    const busca = buscaEl.value.trim().toLowerCase();
-    let filtrados = locaisDoEstado;
-    if (busca) {
-        filtrados = filtrados.filter(local => {
-            const haystack = [nomeGrupo(local), local.local_funcionamento, local.cidade, local.bairro, local.logradouro].join(' ').toLowerCase();
-            return haystack.includes(busca);
+        const busca = buscaEl.value.trim().toLowerCase();
+        let filtrados = locaisDoEstado;
+        if (busca) {
+            filtrados = filtrados.filter(local => {
+                const haystack = [nomeGrupo(local), local.gr_local, local.gr_cidade, local.gr_bairro, local.gr_endereco].join(' ').toLowerCase();
+                return haystack.includes(busca);
+            });
+        }
+        contadorEl.textContent = filtrados.length === 0 ? 'Nenhum local encontrado.' : `${filtrados.length} local${filtrados.length > 1 ? 's' : ''} encontrado${filtrados.length > 1 ? 's' : ''}.`;
+        if (filtrados.length === 0) {
+            listaEl.innerHTML = `<div class="estado-msg"><div class="icone">🔍</div><p>Nenhum grupo do tipo "${tipoFiltro}"<br>${busca ? 'para a busca "' + esc(busca) + '"' : ''}</p></div>`;
+            return;
+        }
+        listaEl.innerHTML = filtrados.map((local, idx) => {
+            let badge = '';
+            if (local.grupo_tipo === 'Al-Anon') badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
+            else if (local.grupo_tipo === 'Alateen') badge = '<span class="grupo-badge badge-alateen">Alateen</span>';
+            else if (local.grupo_tipo === 'Eletrônico') badge = '<span class="grupo-badge badge-eletronico">Eletrônico</span>';
+            else badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
+            const endereco = [local.gr_endereco, local.gr_numero, local.gr_bairro].filter(Boolean).join(', ');
+            const cidadeUF = [local.gr_cidade, local.gr_uf].filter(Boolean).join(' - ');
+            return `
+                <div class="grupo-card" data-tipo-idx="${idx}" tabindex="0" role="button">
+                    <div class="grupo-card-topo">
+                        <div class="grupo-nome">${esc(nomeGrupo(local))}</div>
+                        ${badge}
+                    </div>
+                    <div class="grupo-info">
+                        ${local.gr_local ? `<span><span class="rotulo">Local:</span> ${esc(local.gr_local)}</span>` : ''}
+                        ${endereco ? `<span><span class="rotulo">Endereço:</span> ${esc(endereco)}</span>` : ''}
+                        ${cidadeUF ? `<span><span class="rotulo">Cidade:</span> ${esc(cidadeUF)}</span>` : ''}
+                        ${local.gr_telefone ? `<span><span class="rotulo">Telefone:</span> ${esc(local.gr_telefone)}</span>` : ''}
+                        ${local.gr_celular ? `<span><span class="rotulo">Celular:</span> ${esc(local.gr_celular)}</span>` : ''}
+                    </div>
+                    <div class="hint-clique">🔍 Clique para ver detalhes e localização</div>
+                </div>`;
+        }).join('');
+        listaEl.querySelectorAll('.grupo-card').forEach(card => {
+            const idx = parseInt(card.dataset.tipoIdx);
+            const handler = () => {
+                abrirModalLocal(filtrados[idx]);
+            };
+            card.addEventListener('click', handler);
+            card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
         });
     }
-    contadorEl.textContent = filtrados.length === 0 ? 'Nenhum local encontrado.' : `${filtrados.length} local${filtrados.length > 1 ? 's' : ''} encontrado${filtrados.length > 1 ? 's' : ''}.`;
-    if (filtrados.length === 0) {
-        listaEl.innerHTML = `<div class="estado-msg"><div class="icone">🔍</div><p>Nenhum grupo do tipo "${situacaoFiltro}"<br>${busca ? 'para a busca "' + esc(busca) + '"' : ''}</p></div>`;
-        return;
-    }
-    listaEl.innerHTML = filtrados.map((local, idx) => {
-        const badge = badgeGrupo('alanon');
-        const endereco = [local.logradouro, local.numero, local.bairro].filter(Boolean).join(', ');
-        const cidadeUF = [local.cidade, local.uf].filter(Boolean).join(' - ');
-        return `
-            <div class="grupo-card" data-tipo-idx="${idx}" tabindex="0" role="button">
-                <div class="grupo-card-topo">
-                    <div class="grupo-nome">${esc(nomeGrupo(local))}</div>
-                    ${badge}
-                </div>
-                <div class="grupo-info">
-                    ${local.local_funcionamento ? `<span><span class="rotulo">Local:</span> ${esc(local.local_funcionamento)}</span>` : ''}
-                    ${endereco ? `<span><span class="rotulo">Endereço:</span> ${esc(endereco)}</span>` : ''}
-                    ${cidadeUF ? `<span><span class="rotulo">Cidade:</span> ${esc(cidadeUF)}</span>` : ''}
-                </div>
-                <div class="hint-clique">🔍 Clique para ver detalhes e localização</div>
-            </div>`;
-    }).join('');
-    listaEl.querySelectorAll('.grupo-card').forEach(card => {
-        const idx = parseInt(card.dataset.tipoIdx);
-        const handler = () => {
-            abrirModalLocal(filtrados[idx]);
-        };
-        card.addEventListener('click', handler);
-        card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
-    });
-}
 
     // Sobrescreve a função fecharPainel para restaurar o modo normal
     fecharPainel = function () {
-        if (modoSituacaoAtivo) {
-            modoSituacaoAtivo = false;
-            situacaoFiltro = null;
+        if (modoTipoAtivo) {
+            modoTipoAtivo = false;
+            tipoFiltro = null;
             ufAtiva = null;
             const painelFiltros = document.querySelector('.painel-filtros');
             if (painelFiltros) painelFiltros.style.display = 'flex';
@@ -509,7 +532,7 @@
                     if (cached) {
                         coords = cached;
                     } else {
-                        const endereco = [local.logradouro, local.numero, local.bairro, local.cidade, local.uf, 'Brasil'].filter(Boolean).join(', ');
+                        const endereco = [local.gr_endereco, local.gr_numero, local.gr_bairro, local.gr_cidade, local.gr_uf, 'Brasil'].filter(Boolean).join(', ');
                         coords = await geocodificarEndereco(endereco);
                         if (coords) setCachedCoords(local, coords);
                     }
@@ -520,12 +543,12 @@
 
             for (const { local, coords } of locaisComCoords) {
                 const nome = nomeGrupo(local);
-                const cidade = local.cidade || '';
-                const uf = local.uf || '';
-                const endereco = [local.logradouro, local.numero, local.bairro].filter(Boolean).join(', ');
+                const cidade = local.gr_cidade || '';
+                const uf = local.gr_uf || '';
+                const endereco = [local.gr_endereco, local.gr_numero, local.gr_bairro].filter(Boolean).join(', ');
                 const popupContent = `
                     <strong>${esc(nome)}</strong><br>
-                    ${local.local_funcionamento ? `<em>${esc(local.local_funcionamento)}</em><br>` : ''}
+                    ${local.gr_local ? `<em>${esc(local.gr_local)}</em><br>` : ''}
                     ${endereco ? esc(endereco) + '<br>' : ''}
                     ${cidade} ${uf}<br>
                     <button class="ver-detalhes-mapa" style="margin-top:5px;padding:4px 8px;background:#1a6bbf;color:#fff;border:none;border-radius:4px;cursor:pointer;">Ver detalhes</button>
@@ -589,8 +612,8 @@
         if (!todosLocais) return;
         const resultados = todosLocais.filter(local => {
             const nome = nomeGrupo(local).toLowerCase();
-            const localFuncionamento = (local.local_funcionamento || '').toLowerCase();
-            const cidade = (local.cidade || '').toLowerCase();
+            const localFuncionamento = (local.gr_local || '').toLowerCase();
+            const cidade = (local.gr_cidade || '').toLowerCase();
             return nome.includes(termo) || localFuncionamento.includes(termo) || cidade.includes(termo);
         });
         if (resultados.length === 0) {
@@ -598,9 +621,13 @@
             return;
         }
         pesquisaResultados.innerHTML = resultados.map((local, idx) => {
-            const badge = badgeGrupo('alanon');
-            const endereco = [local.logradouro, local.numero, local.bairro].filter(Boolean).join(', ');
-            const cidadeUF = [local.cidade, local.uf].filter(Boolean).join(' - ');
+            let badge = '';
+            if (local.grupo_tipo === 'Al-Anon') badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
+            else if (local.grupo_tipo === 'Alateen') badge = '<span class="grupo-badge badge-alateen">Alateen</span>';
+            else if (local.grupo_tipo === 'Eletrônico') badge = '<span class="grupo-badge badge-eletronico">Eletrônico</span>';
+            else badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
+            const endereco = [local.gr_endereco, local.gr_numero, local.gr_bairro].filter(Boolean).join(', ');
+            const cidadeUF = [local.gr_cidade, local.gr_uf].filter(Boolean).join(' - ');
             return `
                 <div class="grupo-card" data-pesquisa-idx="${idx}">
                     <div class="grupo-card-topo">
@@ -608,9 +635,11 @@
                         ${badge}
                     </div>
                     <div class="grupo-info">
-                        ${local.local_funcionamento ? `<span><span class="rotulo">Local:</span> ${esc(local.local_funcionamento)}</span>` : ''}
+                        ${local.gr_local ? `<span><span class="rotulo">Local:</span> ${esc(local.gr_local)}</span>` : ''}
                         ${endereco ? `<span><span class="rotulo">Endereço:</span> ${esc(endereco)}</span>` : ''}
                         ${cidadeUF ? `<span><span class="rotulo">Cidade:</span> ${esc(cidadeUF)}</span>` : ''}
+                        ${local.gr_telefone ? `<span><span class="rotulo">Telefone:</span> ${esc(local.gr_telefone)}</span>` : ''}
+                        ${local.gr_celular ? `<span><span class="rotulo">Celular:</span> ${esc(local.gr_celular)}</span>` : ''}
                     </div>
                     <div class="hint-clique">🔍 Clique para ver detalhes e localização</div>
                 </div>`;
@@ -694,7 +723,7 @@
             abrirPainel();
             try {
                 const dados = await carregarDados();
-                locaisDoEstado = dados.filter(local => (local.uf || '').toUpperCase() === uf.toUpperCase());
+                locaisDoEstado = dados.filter(local => (local.gr_uf || '').toUpperCase() === uf.toUpperCase());
                 ufAtiva = uf;
                 if (locaisDoEstado.length === 0) {
                     listaEl.innerHTML = `<div class="estado-msg"><div class="icone">😔</div><p>Nenhum local cadastrado<br>em <strong>${nome}</strong> ainda.</p></div>`;
@@ -709,43 +738,63 @@
         });
     });
 
-    // Filtros
-    filtrosBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            filtroAtivo = btn.dataset.filtro;
-            filtrosBtns.forEach(b => b.classList.toggle('ativo', b === btn));
-            renderizar();
+    // Filtros (Al-Anon, Alateen, Eletrônico) - ajustar conforme o HTML existente
+    if (filtrosBtns.length === 0) {
+        // Se não houver botões de filtro no HTML, podemos ignorar; caso contrário, configuramos
+    } else {
+        filtrosBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const filtroValor = btn.dataset.filtro;
+                if (filtroValor === 'todos') {
+                    filtroAtivo = 'todos';
+                } else if (filtroValor === 'alanon') {
+                    filtroAtivo = 'Al-Anon';
+                } else if (filtroValor === 'alateen') {
+                    filtroAtivo = 'Alateen';
+                } else if (filtroValor === 'eletronico') {
+                    filtroAtivo = 'Eletrônico';
+                }
+                filtrosBtns.forEach(b => b.classList.toggle('ativo', b === btn));
+                if (modoTipoAtivo) renderizarPorTipo();
+                else renderizar();
+            });
         });
-    });
+    }
 
-    // Listener da busca no painel (funciona tanto para modo estado quanto modo situação)
+    // Listener da busca no painel
     let debounceTimer;
     buscaEl.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            if (modoSituacaoAtivo) {
-                renderizarPorSituacao();
+            if (modoTipoAtivo) {
+                renderizarPorTipo();
             } else {
                 renderizar();
             }
         }, 220);
     });
 
-    // ========== EVENTOS DOS BOTÕES DE SITUAÇÃO ==========
+    // ========== EVENTOS DOS BOTÕES DE TIPO ==========
     const btnEletronicos = document.getElementById('btn-grupos-eletronicos');
-    const btnAcolhimento = document.getElementById('btn-acolhimento');
+    const btnAlateen = document.getElementById('btn-alateen'); // supondo que exista
+    const btnAlAnon = document.getElementById('btn-al-anon');   // supondo que exista
 
-if (btnEletronicos) {
-    btnEletronicos.addEventListener('click', (e) => {
-        e.preventDefault();
-        abrirPorTipoGrupo('Grupo Eletrônico', 'Grupos Eletrônicos');
-    });
-}
-
-if (btnAcolhimento) {
-    btnAcolhimento.addEventListener('click', (e) => {
-        e.preventDefault();
-        abrirPorTipoGrupo('Comitê de Área', 'Comitês de Área');
-    });
-}
+    if (btnEletronicos) {
+        btnEletronicos.addEventListener('click', (e) => {
+            e.preventDefault();
+            abrirPorTipoGrupo('Eletrônico', 'Grupos Eletrônicos');
+        });
+    }
+    if (btnAlateen) {
+        btnAlateen.addEventListener('click', (e) => {
+            e.preventDefault();
+            abrirPorTipoGrupo('Alateen', 'Grupos Alateen');
+        });
+    }
+    if (btnAlAnon) {
+        btnAlAnon.addEventListener('click', (e) => {
+            e.preventDefault();
+            abrirPorTipoGrupo('Al-Anon', 'Grupos Al-Anon');
+        });
+    }
 })();
