@@ -1,13 +1,13 @@
 (() => {
     // ========== CONFIGURAÇÃO ==========
     const API_URL = 'https://al-anon.org.br/api/cadastro_grupos.php';
-    const LOCATIONIQ_KEY = 'pk.e0313d2db1366ca073ba2189fc75d981'; // Substitua se necessário
+    const LOCATIONIQ_KEY = 'pk.e0313d2db1366ca073ba2189fc75d981';
     const CACHE_KEY = 'alanon_enderecos_coords';
     const CACHE_VERSION = 'v2';
 
-    let todosLocais = null;         // array de objetos retornados pela API
+    let todosLocais = null;
     let locaisDoEstado = [];
-    let filtroAtivo = 'todos';      // 'todos', 'alanon', 'alateen', 'eletronico'
+    let filtroAtivo = 'todos';
     let ufAtiva = null;
     let mapaLeaflet = null;
     let mapaMarker = null;
@@ -43,11 +43,9 @@
     const pesquisaInput = document.getElementById('pesquisa-input');
     const pesquisaResultados = document.getElementById('pesquisa-resultados');
 
-    // ========== VARIÁVEIS PARA MODO TIPO ==========
     let modoTipoAtivo = false;
-    let tipoFiltro = null; // 'Al-Anon', 'Alateen', 'Grupo Eletrônico'
+    let tipoFiltro = null;
 
-    // ========== FUNÇÕES AUXILIARES ==========
     function esc(str) {
         if (!str) return '';
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -57,7 +55,6 @@
         return local.gr_nome || 'Grupo sem nome';
     }
 
-    // ========== GEOCODIFICAÇÃO (LocationIQ) ==========
     async function geocodificarLocationIQ(query) {
         const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=br&accept-language=pt-BR`;
         try {
@@ -89,7 +86,6 @@
         return null;
     }
 
-    // ========== CACHE DE COORDENADAS ==========
     function getCachedCoords(local) {
         try {
             const cache = localStorage.getItem(CACHE_KEY);
@@ -131,7 +127,6 @@
         return partes.join(', ');
     }
 
-    // ========== PAINEL LATERAL ==========
     function abrirPainel() {
         overlay.style.display = 'block';
         painel.classList.add('aberto');
@@ -153,7 +148,6 @@
     overlay.addEventListener('click', () => fecharPainel());
     document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal() || fecharPainel(); });
 
-    // ========== MODAL DE DETALHES ==========
     function abrirModal() { modalOverlay.classList.add('visivel'); }
     function fecharModal() {
         if (!modalOverlay.classList.contains('visivel')) return false;
@@ -175,7 +169,6 @@
 
     async function abrirModalLocal(local) {
         const nome = nomeGrupo(local);
-        // Define o badge baseado no grupo_tipo (mapeando para os três tipos)
         let badgeHtml = '';
         if (local.grupo_tipo === 'Al-Anon') badgeHtml = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
         else if (local.grupo_tipo === 'Alateen') badgeHtml = '<span class="grupo-badge badge-alateen">Alateen</span>';
@@ -189,14 +182,12 @@
         const endereco = montarEnderecoCompleto(local);
         const endNav = encodeURIComponent(endereco || nome + ' Brasil');
 
-        // Montar informações (parte esquerda)
         let infoHTML = '';
         if (local.gr_local) {
             infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">Local da Reunião</div>`;
             infoHTML += linha('🏛️', local.gr_local);
             infoHTML += `</div>`;
         }
-        // Exibe descrição livre da reunião (gr_reuniao) e também a estruturada (reuniao)
         let reuniaoText = '';
         if (local.gr_reuniao && local.gr_reuniao.trim()) reuniaoText += local.gr_reuniao.trim();
         if (local.reuniao && local.reuniao.trim()) {
@@ -219,7 +210,6 @@
             if (local.gr_cep) infoHTML += linha('📮', local.gr_cep);
             infoHTML += `</div>`;
         }
-        // Contatos
         if (local.gr_email || local.gr_telefone || local.gr_celular) {
             infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">📞 Contatos</div>`;
             if (local.gr_email) infoHTML += linha('✉️', `<a href="mailto:${local.gr_email}">${local.gr_email}</a>`);
@@ -237,7 +227,6 @@
         modalInfos.innerHTML = infoHTML;
 
         const isOnline = local.grupo_tipo === 'Eletrônico';
-
         const modalMapaWrap = document.querySelector('.modal-mapa-wrap');
         const modalMapaDiv = document.getElementById('modal-mapa');
         const modalMapaAcoes = document.getElementById('modal-mapa-acoes');
@@ -245,15 +234,12 @@
         if (isOnline) {
             if (modalMapaDiv) modalMapaDiv.style.display = 'none';
             if (modalMapaAcoes) modalMapaAcoes.innerHTML = '';
-
             let onlineInfoDiv = document.getElementById('online-info-block');
             if (onlineInfoDiv) onlineInfoDiv.remove();
-
             onlineInfoDiv = document.createElement('div');
             onlineInfoDiv.id = 'online-info-block';
             onlineInfoDiv.className = 'online-info-block';
             if (modalMapaWrap) modalMapaWrap.appendChild(onlineInfoDiv);
-
             let onlineHtml = `<div class="modal-secao"><div class="modal-secao-titulo">🌐 Reunião Online</div>`;
             if (local.reuniao_url && local.reuniao_url.trim() !== '') {
                 onlineHtml += `<div class="modal-linha"><span class="icone-linha">🔗</span><a href="${esc(local.reuniao_url)}" target="_blank" rel="noopener">Acessar reunião online</a></div>`;
@@ -263,21 +249,15 @@
             onlineHtml += `</div>`;
             onlineInfoDiv.innerHTML = onlineHtml;
             onlineInfoDiv.style.display = 'block';
-
             if (mapaMarker && mapaLeaflet) mapaLeaflet.removeLayer(mapaMarker);
-
             abrirModal();
-            setTimeout(() => {
-                if (mapaLeaflet) mapaLeaflet.invalidateSize();
-            }, 120);
+            setTimeout(() => { if (mapaLeaflet) mapaLeaflet.invalidateSize(); }, 120);
             return;
         }
 
-        // Grupo presencial
         if (modalMapaDiv) modalMapaDiv.style.display = 'block';
         const onlineBlock = document.getElementById('online-info-block');
         if (onlineBlock) onlineBlock.style.display = 'none';
-
         if (modalMapaAcoes) {
             modalMapaAcoes.innerHTML = `
                 <a class="btn-mapa-acao google" href="https://www.google.com/maps/search/?api=1&query=${endNav}" target="_blank" rel="noopener">🗺️ Google Maps</a>
@@ -324,19 +304,18 @@
         return `<div class="modal-linha"><span class="icone-linha">${icone}</span><span>${esc(texto)}</span></div>`;
     }
 
-    // ========== CARREGAR DADOS DA API ==========
+    // ========== CARREGAR DADOS DA API (SEM FILTRO DE SITUAÇÃO) ==========
     async function carregarDados() {
         if (todosLocais !== null) return todosLocais;
         const resp = await fetch(API_URL);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const json = await resp.json();
         if (!json.success) throw new Error(json.message || 'Erro desconhecido');
-        // Filtra apenas registros com situacao = 'Aberto'
-        todosLocais = json.data.filter(local => local.situacao === 'Aberto');
+        // Removeu o filtro por situacao === 'Aberto' - carrega todos os grupos
+        todosLocais = Array.isArray(json.data) ? json.data : [];
         return todosLocais;
     }
 
-    // ========== RENDERIZAÇÃO ORIGINAL (por estado) ==========
     function renderizar() {
         const busca = buscaEl.value.trim().toLowerCase();
         let filtrados = locaisDoEstado;
@@ -401,7 +380,6 @@
         });
     }
 
-    // ========== FUNÇÕES PARA EXIBIR POR TIPO ==========
     function abrirPorTipoGrupo(tipo, titulo) {
         if (!todosLocais) {
             carregarDados().then(() => {
@@ -411,28 +389,22 @@
             });
             return;
         }
-
         const filtrados = todosLocais.filter(local => local.grupo_tipo === tipo);
         if (filtrados.length === 0) {
             alert(`Nenhum grupo encontrado com tipo = "${tipo}".`);
             return;
         }
-
         modoTipoAtivo = true;
         tipoFiltro = tipo;
         ufAtiva = null;
-
         tituloEl.textContent = titulo;
         bandeiraEl.src = '';
         bandeiraEl.style.display = 'none';
-
         const painelFiltros = document.querySelector('.painel-filtros');
         if (painelFiltros) painelFiltros.style.display = 'none';
-
         locaisDoEstado = filtrados;
         filtroAtivo = 'todos';
         renderizarPorTipo();
-
         abrirPainel();
     }
 
@@ -476,15 +448,12 @@
         }).join('');
         listaEl.querySelectorAll('.grupo-card').forEach(card => {
             const idx = parseInt(card.dataset.tipoIdx);
-            const handler = () => {
-                abrirModalLocal(filtrados[idx]);
-            };
+            const handler = () => { abrirModalLocal(filtrados[idx]); };
             card.addEventListener('click', handler);
             card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
         });
     }
 
-    // Sobrescreve a função fecharPainel para restaurar o modo normal
     fecharPainel = function () {
         if (modoTipoAtivo) {
             modoTipoAtivo = false;
@@ -501,7 +470,6 @@
         fecharPainelOriginal();
     };
 
-    // ========== MAPA GERAL ==========
     async function abrirMapaGeral() {
         modalMapaGeral.classList.add('visivel');
         if (mapaGeral) {
@@ -585,7 +553,6 @@
     btnFecharMapaGeral.addEventListener('click', fecharMapaGeral);
     modalMapaGeral.addEventListener('click', e => { if (e.target === modalMapaGeral) fecharMapaGeral(); });
 
-    // ========== PESQUISA ==========
     async function abrirPesquisa() {
         modalPesquisa.classList.add('visivel');
         if (!todosLocais) {
@@ -665,7 +632,6 @@
         pesquisaDebounce = setTimeout(atualizarResultadosPesquisa, 220);
     });
 
-    // ========== LISTA DE ESTADOS ==========
     const estados = [
         { uf: "AC", nome: "Acre", img: "https://atlasescolar.ibge.gov.br/images/bandeiras/ufs/ac.png" },
         { uf: "AL", nome: "Alagoas", img: "https://atlasescolar.ibge.gov.br/images/bandeiras/ufs/al.png" },
@@ -738,10 +704,7 @@
         });
     });
 
-    // Filtros (Al-Anon, Alateen, Eletrônico) - ajustar conforme o HTML existente
-    if (filtrosBtns.length === 0) {
-        // Se não houver botões de filtro no HTML, podemos ignorar; caso contrário, configuramos
-    } else {
+    if (filtrosBtns.length > 0) {
         filtrosBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const filtroValor = btn.dataset.filtro;
@@ -761,23 +724,18 @@
         });
     }
 
-    // Listener da busca no painel
     let debounceTimer;
     buscaEl.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            if (modoTipoAtivo) {
-                renderizarPorTipo();
-            } else {
-                renderizar();
-            }
+            if (modoTipoAtivo) renderizarPorTipo();
+            else renderizar();
         }, 220);
     });
 
-    // ========== EVENTOS DOS BOTÕES DE TIPO ==========
     const btnEletronicos = document.getElementById('btn-grupos-eletronicos');
-    const btnAlateen = document.getElementById('btn-alateen'); // supondo que exista
-    const btnAlAnon = document.getElementById('btn-al-anon');   // supondo que exista
+    const btnAlateen = document.getElementById('btn-alateen');
+    const btnAlAnon = document.getElementById('btn-al-anon');
 
     if (btnEletronicos) {
         btnEletronicos.addEventListener('click', (e) => {
