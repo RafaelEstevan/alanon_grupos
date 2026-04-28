@@ -217,13 +217,13 @@
             if (local.gr_celular) infoHTML += linha('📱', local.gr_celular);
             infoHTML += `</div>`;
         }
-        if (local.gr_c_nome || local.gr_c_endereco) {
-            infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">📬 Correspondência</div>`;
-            if (local.gr_c_nome) infoHTML += linha('👤', local.gr_c_nome);
-            if (local.gr_c_endereco) infoHTML += linha('🏠', `${local.gr_c_endereco}${local.gr_c_numero ? ', ' + local.gr_c_numero : ''}`);
-            if (local.gr_c_cidade && local.gr_c_uf) infoHTML += linha('🌆', `${local.gr_c_cidade} - ${local.gr_c_uf}`);
-            infoHTML += `</div>`;
-        }
+        // if (local.gr_c_nome || local.gr_c_endereco) {
+        //     infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">📬 Correspondência</div>`;
+        //     if (local.gr_c_nome) infoHTML += linha('👤', local.gr_c_nome);
+        //     if (local.gr_c_endereco) infoHTML += linha('🏠', `${local.gr_c_endereco}${local.gr_c_numero ? ', ' + local.gr_c_numero : ''}`);
+        //     if (local.gr_c_cidade && local.gr_c_uf) infoHTML += linha('🌆', `${local.gr_c_cidade} - ${local.gr_c_uf}`);
+        //     infoHTML += `</div>`;
+        // }
         modalInfos.innerHTML = infoHTML;
 
         const isOnline = local.grupo_tipo === 'Eletrônico';
