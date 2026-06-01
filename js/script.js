@@ -12,6 +12,12 @@
     let mapaLeaflet = null;
     let mapaMarker = null;
 
+    // Estado de navegação por cidades
+    let modoCidades = false;
+    let cidadeSelecionada = null;
+    let nomeCidadeSelecionada = null;
+    let nomeEstadoAtivo = null;
+
     // Elementos DOM
     const painel = document.getElementById('painel-grupos');
     const overlay = document.getElementById('overlay');
@@ -64,7 +70,6 @@
             if (data && data.length > 0) {
                 const lat = parseFloat(data[0].lat);
                 const lon = parseFloat(data[0].lon);
-                console.log('✅ LocationIQ encontrou:', { lat, lon });
                 return { lat, lng: lon };
             }
         } catch (e) {
@@ -75,12 +80,10 @@
 
     async function geocodificarEndereco(endereco) {
         if (!endereco || endereco.trim() === '') return null;
-        console.log('🔍 Geocodificando:', endereco);
         const coords = await geocodificarLocationIQ(endereco);
         if (coords) return coords;
         const cidadeUf = endereco.split(',').slice(-2).join(',').trim();
         if (cidadeUf !== endereco) {
-            console.log('🔄 Fallback cidade/UF:', cidadeUf);
             return await geocodificarLocationIQ(cidadeUf);
         }
         return null;
@@ -140,6 +143,14 @@
         document.body.style.overflow = '';
         document.querySelectorAll('.estado.ativo').forEach(e => e.classList.remove('ativo'));
         ufAtiva = null;
+        modoCidades = false;
+        cidadeSelecionada = null;
+        nomeCidadeSelecionada = null;
+        nomeEstadoAtivo = null;
+        esconderBotaoVoltar();
+        mostrarFiltros();
+        buscaEl.placeholder = 'Buscar por nome, cidade ou bairro…';
+        listaEl.classList.remove('cidades-grid');
     }
 
     let fecharPainel = fecharPainelOriginal;
@@ -174,7 +185,7 @@
         else if (local.grupo_tipo === 'Alateen') badgeHtml = '<span class="grupo-badge badge-alateen">Alateen</span>';
         else if (local.grupo_tipo === 'Eletrônico') badgeHtml = '<span class="grupo-badge badge-eletronico">Eletrônico</span>';
         else badgeHtml = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
-        
+
         modalTitulo.textContent = nome;
         modalBadge.innerHTML = badgeHtml;
         modalCidadeUF.textContent = [local.gr_cidade, local.gr_uf].filter(Boolean).join(' - ');
@@ -217,13 +228,6 @@
             if (local.gr_celular) infoHTML += linha('📱', local.gr_celular);
             infoHTML += `</div>`;
         }
-        // if (local.gr_c_nome || local.gr_c_endereco) {
-        //     infoHTML += `<div class="modal-secao"><div class="modal-secao-titulo">📬 Correspondência</div>`;
-        //     if (local.gr_c_nome) infoHTML += linha('👤', local.gr_c_nome);
-        //     if (local.gr_c_endereco) infoHTML += linha('🏠', `${local.gr_c_endereco}${local.gr_c_numero ? ', ' + local.gr_c_numero : ''}`);
-        //     if (local.gr_c_cidade && local.gr_c_uf) infoHTML += linha('🌆', `${local.gr_c_cidade} - ${local.gr_c_uf}`);
-        //     infoHTML += `</div>`;
-        // }
         modalInfos.innerHTML = infoHTML;
 
         const isOnline = local.grupo_tipo === 'Eletrônico';
@@ -304,19 +308,145 @@
         return `<div class="modal-linha"><span class="icone-linha">${icone}</span><span>${esc(texto)}</span></div>`;
     }
 
-    // ========== CARREGAR DADOS DA API (SEM FILTRO DE SITUAÇÃO) ==========
+    // ========== CARREGAR DADOS DA API ==========
     async function carregarDados() {
         if (todosLocais !== null) return todosLocais;
         const resp = await fetch(API_URL);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const json = await resp.json();
         if (!json.success) throw new Error(json.message || 'Erro desconhecido');
-        // Removeu o filtro por situacao === 'Aberto' - carrega todos os grupos
         todosLocais = Array.isArray(json.data) ? json.data : [];
         return todosLocais;
     }
 
+    // ========== HELPERS BOTÃO VOLTAR / FILTROS / BUSCA ==========
+    function criarBotaoVoltar() {
+        let btn = document.getElementById('btn-voltar-cidades');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'btn-voltar-cidades';
+            btn.innerHTML = '← Voltar para cidades';
+            btn.addEventListener('click', voltarParaCidades);
+            const painelFiltros = document.querySelector('.painel-filtros');
+            painelFiltros.parentNode.insertBefore(btn, painelFiltros);
+        }
+        btn.style.display = 'block';
+    }
+
+    function esconderBotaoVoltar() {
+        const btn = document.getElementById('btn-voltar-cidades');
+        if (btn) btn.style.display = 'none';
+    }
+
+    function mostrarFiltros() {
+        const painelFiltros = document.querySelector('.painel-filtros');
+        if (painelFiltros) painelFiltros.style.display = 'flex';
+    }
+
+    function esconderFiltros() {
+        const painelFiltros = document.querySelector('.painel-filtros');
+        if (painelFiltros) painelFiltros.style.display = 'none';
+    }
+
+    // ========== LISTAR CIDADES DO ESTADO (com grid de duas colunas) ==========
+    function renderizarCidades() {
+        listaEl.classList.add('cidades-grid');
+
+        const busca = buscaEl.value.trim().toLowerCase();
+        const cidadesMap = {};
+        locaisDoEstado.forEach(local => {
+            const cidade = (local.gr_cidade || 'Cidade não informada').trim();
+            if (!cidadesMap[cidade]) cidadesMap[cidade] = [];
+            cidadesMap[cidade].push(local);
+        });
+
+        let cidades = Object.keys(cidadesMap).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        if (busca) {
+            cidades = cidades.filter(c => c.toLowerCase().includes(busca));
+        }
+
+        contadorEl.textContent = cidades.length === 0
+            ? 'Nenhuma cidade encontrada.'
+            : `${cidades.length} cidade${cidades.length > 1 ? 's' : ''} encontrada${cidades.length > 1 ? 's' : ''}.`;
+
+        if (cidades.length === 0) {
+            listaEl.innerHTML = `<div class="estado-msg"><div class="icone">🔍</div><p>Nenhuma cidade encontrada<br>com essa busca.</p></div>`;
+            return;
+        }
+
+        listaEl.innerHTML = cidades.map(cidade => {
+            const grupos = cidadesMap[cidade];
+            const total = grupos.length;
+            const tipoCount = {};
+            grupos.forEach(g => {
+                const tipo = g.grupo_tipo || 'Al-Anon';
+                tipoCount[tipo] = (tipoCount[tipo] || 0) + 1;
+            });
+            const badgesHtml = Object.entries(tipoCount).map(([tipo, qtd]) => {
+                let cls = 'badge-alanon';
+                if (tipo === 'Alateen') cls = 'badge-alateen';
+                else if (tipo === 'Eletrônico') cls = 'badge-eletronico';
+                return `<span class="grupo-badge ${cls}">${qtd} ${esc(tipo)}</span>`;
+            }).join('');
+
+            return `
+            <div class="grupo-card cidade-card" data-cidade="${esc(cidade)}">
+                <div class="cidade-card-topo">
+                    <div class="cidade-nome">📍 ${esc(cidade)}</div>
+                    <span class="cidade-total">${total} grupo${total > 1 ? 's' : ''}</span>
+                </div>
+                <div class="cidade-badges">${badgesHtml}</div>
+                <div class="hint-clique">Clique para ver os grupos</div>
+            </div>`;
+        }).join('');
+
+        // Adiciona evento de clique em cada card de cidade
+        document.querySelectorAll('.cidade-card').forEach(card => {
+            const handler = () => {
+                const nomeCidade = card.dataset.cidade;
+                selecionarCidade(nomeCidade, cidadesMap[nomeCidade]);
+            };
+            card.addEventListener('click', handler);
+        });
+    }
+
+    // ========== SELECIONAR CIDADE E MOSTRAR GRUPOS ==========
+    function selecionarCidade(cidade, grupos) {
+        cidadeSelecionada = cidade;
+        nomeCidadeSelecionada = cidade;
+        modoCidades = false;
+
+        tituloEl.textContent = `${cidade} - ${ufAtiva}`;
+        criarBotaoVoltar();
+        mostrarFiltros();
+        buscaEl.value = '';
+        buscaEl.placeholder = 'Buscar por nome, bairro…';
+        locaisDoEstado = grupos;
+        filtroAtivo = 'todos';
+        filtrosBtns.forEach(b => b.classList.toggle('ativo', b.dataset.filtro === 'todos'));
+        renderizar();
+    }
+
+    // ========== VOLTAR PARA LISTA DE CIDADES ==========
+    function voltarParaCidades() {
+        modoCidades = true;
+        cidadeSelecionada = null;
+        nomeCidadeSelecionada = null;
+        tituloEl.textContent = `Cidades em ${nomeEstadoAtivo}`;
+        esconderBotaoVoltar();
+        esconderFiltros();
+        buscaEl.value = '';
+        buscaEl.placeholder = 'Buscar cidade…';
+        carregarDados().then(dados => {
+            locaisDoEstado = dados.filter(local => (local.gr_uf || '').toUpperCase() === ufAtiva.toUpperCase());
+            renderizarCidades();
+        });
+    }
+
+    // ========== RENDERIZAR GRUPOS (uma coluna) ==========
     function renderizar() {
+        listaEl.classList.remove('cidades-grid');
+
         const busca = buscaEl.value.trim().toLowerCase();
         let filtrados = locaisDoEstado;
         if (filtroAtivo !== 'todos') {
@@ -337,9 +467,11 @@
                 return haystack.includes(busca);
             });
         }
-        contadorEl.textContent = filtrados.length === 0 ? 'Nenhum local encontrado.' : `${filtrados.length} local${filtrados.length > 1 ? 's' : ''} encontrado${filtrados.length > 1 ? 's' : ''}.`;
+        contadorEl.textContent = filtrados.length === 0
+            ? 'Nenhum grupo encontrado.'
+            : `${filtrados.length} grupo${filtrados.length > 1 ? 's' : ''} encontrado${filtrados.length > 1 ? 's' : ''}.`;
         if (filtrados.length === 0) {
-            listaEl.innerHTML = `<div class="estado-msg"><div class="icone">🔍</div><p>Nenhum local encontrado<br>com esses filtros.</p></div>`;
+            listaEl.innerHTML = `<div class="estado-msg"><div class="icone">🔍</div><p>Nenhum grupo encontrado<br>com esses filtros.</p></div>`;
             return;
         }
         listaEl.innerHTML = filtrados.map((local, idx) => {
@@ -351,7 +483,7 @@
             const endereco = [local.gr_endereco, local.gr_numero, local.gr_bairro].filter(Boolean).join(', ');
             const cidadeUF = [local.gr_cidade, local.gr_uf].filter(Boolean).join(' - ');
             return `
-                <div class="grupo-card" data-idx="${idx}" tabindex="0" role="button">
+                <div class="grupo-card" data-idx="${idx}">
                     <div class="grupo-card-topo">
                         <div class="grupo-nome">${esc(nomeGrupo(local))}</div>
                         ${badge}
@@ -366,7 +498,8 @@
                     <div class="hint-clique">🔍 Clique para ver detalhes e localização</div>
                 </div>`;
         }).join('');
-        listaEl.querySelectorAll('.grupo-card').forEach(card => {
+
+        document.querySelectorAll('.grupo-card').forEach(card => {
             const idx = parseInt(card.dataset.idx);
             const handler = () => {
                 const busca2 = buscaEl.value.trim().toLowerCase();
@@ -376,10 +509,10 @@
                 if (filtrados2[idx]) abrirModalLocal(filtrados2[idx]);
             };
             card.addEventListener('click', handler);
-            card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
         });
     }
 
+    // ========== MODO TIPO (Eletrônicos, Alateen, etc.) ==========
     function abrirPorTipoGrupo(tipo, titulo) {
         if (!todosLocais) {
             carregarDados().then(() => {
@@ -400,15 +533,17 @@
         tituloEl.textContent = titulo;
         bandeiraEl.src = '';
         bandeiraEl.style.display = 'none';
-        const painelFiltros = document.querySelector('.painel-filtros');
-        if (painelFiltros) painelFiltros.style.display = 'none';
+        esconderFiltros();
+        esconderBotaoVoltar();
         locaisDoEstado = filtrados;
         filtroAtivo = 'todos';
+        listaEl.classList.remove('cidades-grid');
         renderizarPorTipo();
         abrirPainel();
     }
 
     function renderizarPorTipo() {
+        listaEl.classList.remove('cidades-grid');
         const busca = buscaEl.value.trim().toLowerCase();
         let filtrados = locaisDoEstado;
         if (busca) {
@@ -417,7 +552,9 @@
                 return haystack.includes(busca);
             });
         }
-        contadorEl.textContent = filtrados.length === 0 ? 'Nenhum local encontrado.' : `${filtrados.length} local${filtrados.length > 1 ? 's' : ''} encontrado${filtrados.length > 1 ? 's' : ''}.`;
+        contadorEl.textContent = filtrados.length === 0
+            ? 'Nenhum local encontrado.'
+            : `${filtrados.length} local${filtrados.length > 1 ? 's' : ''} encontrado${filtrados.length > 1 ? 's' : ''}.`;
         if (filtrados.length === 0) {
             listaEl.innerHTML = `<div class="estado-msg"><div class="icone">🔍</div><p>Nenhum grupo do tipo "${tipoFiltro}"<br>${busca ? 'para a busca "' + esc(busca) + '"' : ''}</p></div>`;
             return;
@@ -431,7 +568,7 @@
             const endereco = [local.gr_endereco, local.gr_numero, local.gr_bairro].filter(Boolean).join(', ');
             const cidadeUF = [local.gr_cidade, local.gr_uf].filter(Boolean).join(' - ');
             return `
-                <div class="grupo-card" data-tipo-idx="${idx}" tabindex="0" role="button">
+                <div class="grupo-card" data-tipo-idx="${idx}">
                     <div class="grupo-card-topo">
                         <div class="grupo-nome">${esc(nomeGrupo(local))}</div>
                         ${badge}
@@ -446,11 +583,10 @@
                     <div class="hint-clique">🔍 Clique para ver detalhes e localização</div>
                 </div>`;
         }).join('');
-        listaEl.querySelectorAll('.grupo-card').forEach(card => {
+        document.querySelectorAll('.grupo-card').forEach(card => {
             const idx = parseInt(card.dataset.tipoIdx);
             const handler = () => { abrirModalLocal(filtrados[idx]); };
             card.addEventListener('click', handler);
-            card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
         });
     }
 
@@ -459,8 +595,7 @@
             modoTipoAtivo = false;
             tipoFiltro = null;
             ufAtiva = null;
-            const painelFiltros = document.querySelector('.painel-filtros');
-            if (painelFiltros) painelFiltros.style.display = 'flex';
+            mostrarFiltros();
             bandeiraEl.style.display = '';
             tituloEl.textContent = 'Grupos';
             listaEl.innerHTML = '';
@@ -470,6 +605,7 @@
         fecharPainelOriginal();
     };
 
+    // ========== MAPA GERAL ==========
     async function abrirMapaGeral() {
         modalMapaGeral.classList.add('visivel');
         if (mapaGeral) {
@@ -553,6 +689,7 @@
     btnFecharMapaGeral.addEventListener('click', fecharMapaGeral);
     modalMapaGeral.addEventListener('click', e => { if (e.target === modalMapaGeral) fecharMapaGeral(); });
 
+    // ========== PESQUISA ==========
     async function abrirPesquisa() {
         modalPesquisa.classList.add('visivel');
         if (!todosLocais) {
@@ -611,19 +748,13 @@
                     <div class="hint-clique">🔍 Clique para ver detalhes e localização</div>
                 </div>`;
         }).join('');
-        pesquisaResultados.querySelectorAll('.grupo-card').forEach(card => {
+        document.querySelectorAll('#modal-pesquisa .grupo-card').forEach(card => {
             const idx = parseInt(card.dataset.pesquisaIdx);
             const handler = () => {
                 fecharPesquisa();
                 abrirModalLocal(resultados[idx]);
             };
             card.addEventListener('click', handler);
-            card.addEventListener('keydown', e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handler();
-                }
-            });
         });
     }
     let pesquisaDebounce;
@@ -632,6 +763,7 @@
         pesquisaDebounce = setTimeout(atualizarResultadosPesquisa, 220);
     });
 
+    // ========== ESTADOS ==========
     const estados = [
         { uf: "AC", nome: "Acre", img: "https://atlasescolar.ibge.gov.br/images/bandeiras/ufs/ac.png" },
         { uf: "AL", nome: "Alagoas", img: "https://atlasescolar.ibge.gov.br/images/bandeiras/ufs/al.png" },
@@ -672,30 +804,46 @@
         estadosGrid.appendChild(div);
     });
 
+    // ========== CLIQUE NO ESTADO ==========
     document.querySelectorAll('.estado').forEach(el => {
         el.addEventListener('click', async () => {
             const uf = el.dataset.uf;
             const nome = el.dataset.nome;
             const imgSrc = el.querySelector('img').src;
+
             document.querySelectorAll('.estado.ativo').forEach(e => e.classList.remove('ativo'));
             el.classList.add('ativo');
-            tituloEl.textContent = `Locais em ${nome}`;
+
+            ufAtiva = uf;
+            nomeEstadoAtivo = nome;
+            modoCidades = true;
+            cidadeSelecionada = null;
+            nomeCidadeSelecionada = null;
+            modoTipoAtivo = false;
+
+            tituloEl.textContent = `Cidades em ${nome}`;
             bandeiraEl.src = imgSrc;
-            filtroAtivo = 'todos';
-            filtrosBtns.forEach(b => b.classList.toggle('ativo', b.dataset.filtro === 'todos'));
+            bandeiraEl.style.display = '';
+
+            esconderFiltros();
+            esconderBotaoVoltar();
             buscaEl.value = '';
-            listaEl.innerHTML = `<div class="estado-msg"><div class="spinner"></div><p>Carregando locais...</p></div>`;
+            buscaEl.placeholder = 'Buscar cidade…';
+
+            listaEl.innerHTML = `<div class="estado-msg"><div class="spinner"></div><p>Carregando cidades...</p></div>`;
             contadorEl.textContent = '';
+
             abrirPainel();
+
             try {
                 const dados = await carregarDados();
                 locaisDoEstado = dados.filter(local => (local.gr_uf || '').toUpperCase() === uf.toUpperCase());
-                ufAtiva = uf;
+
                 if (locaisDoEstado.length === 0) {
-                    listaEl.innerHTML = `<div class="estado-msg"><div class="icone">😔</div><p>Nenhum local cadastrado<br>em <strong>${nome}</strong> ainda.</p></div>`;
-                    contadorEl.textContent = '0 locais encontrados.';
+                    listaEl.innerHTML = `<div class="estado-msg"><div class="icone">😔</div><p>Nenhum grupo cadastrado<br>em <strong>${nome}</strong> ainda.</p></div>`;
+                    contadorEl.textContent = '0 cidades encontradas.';
                 } else {
-                    renderizar();
+                    renderizarCidades();
                 }
             } catch (err) {
                 listaEl.innerHTML = `<div class="estado-msg"><div class="icone">⚠️</div><p>Erro ao carregar os dados.<br><small>${err.message}</small></p></div>`;
@@ -704,19 +852,15 @@
         });
     });
 
+    // ========== FILTROS ==========
     if (filtrosBtns.length > 0) {
         filtrosBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const filtroValor = btn.dataset.filtro;
-                if (filtroValor === 'todos') {
-                    filtroAtivo = 'todos';
-                } else if (filtroValor === 'alanon') {
-                    filtroAtivo = 'Al-Anon';
-                } else if (filtroValor === 'alateen') {
-                    filtroAtivo = 'Alateen';
-                } else if (filtroValor === 'eletronico') {
-                    filtroAtivo = 'Eletrônico';
-                }
+                if (filtroValor === 'todos') filtroAtivo = 'todos';
+                else if (filtroValor === 'alanon') filtroAtivo = 'Al-Anon';
+                else if (filtroValor === 'alateen') filtroAtivo = 'Alateen';
+                else if (filtroValor === 'eletronico') filtroAtivo = 'Eletrônico';
                 filtrosBtns.forEach(b => b.classList.toggle('ativo', b === btn));
                 if (modoTipoAtivo) renderizarPorTipo();
                 else renderizar();
@@ -724,15 +868,18 @@
         });
     }
 
+    // ========== BUSCA ==========
     let debounceTimer;
     buscaEl.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
             if (modoTipoAtivo) renderizarPorTipo();
+            else if (modoCidades) renderizarCidades();
             else renderizar();
         }, 220);
     });
 
+    // ========== BOTÕES TIPO ==========
     const btnEletronicos = document.getElementById('btn-grupos-eletronicos');
     const btnAlateen = document.getElementById('btn-alateen');
     const btnAlAnon = document.getElementById('btn-al-anon');
