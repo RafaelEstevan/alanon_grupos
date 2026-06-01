@@ -509,6 +509,11 @@ body {
     color: #1a7a36;
 }
 
+.badge-comite {
+    background-color: #6c757d;
+    color: white;
+}
+
 .grupo-info {
     font-size: 0.84rem;
     line-height: 1.45;
