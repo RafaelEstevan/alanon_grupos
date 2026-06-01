@@ -21,12 +21,6 @@ body {
 }
 
 /* ===== HEADER BRANCO ===== */
-body {
-    margin: 0;
-    font-family: Arial, Helvetica, sans-serif;
-}
-
-/* HEADER BRANCO */
 .fusion-header {
     background: #ffffff;
     padding: 30px 0 10px 0;
@@ -35,7 +29,6 @@ body {
     z-index: 100000;
 }
 
-/* CENTRALIZAÇÃO */
 .fusion-row {
     width: 90%;
     max-width: 1200px;
@@ -45,13 +38,11 @@ body {
     justify-content: space-between;
 }
 
-/* LOGO */
 .fusion-logo img {
     max-height: 120px;
     height: auto;
 }
 
-/* FRASE */
 .fusion-header-content-3-wrapper {
     text-align: right;
 }
@@ -61,13 +52,9 @@ body {
     font-size: 24px;
     font-weight: 500;
     color: #ff2323;
-    /* azul do site */
 }
 
-/* ============================= */
-/*           NAVBAR              */
-/* ============================= */
-
+/* ===== NAVBAR ===== */
 .navbar {
     background: #ffffff;
 }
@@ -100,14 +87,9 @@ body {
     transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Hover principal */
 .navbar ul li a:hover {
     color: #1c1698;
 }
-
-/* ============================= */
-/*           DROPDOWN            */
-/* ============================= */
 
 .navbar ul li .submenu {
     position: absolute;
@@ -120,12 +102,10 @@ body {
     margin: 0;
     border-radius: 6px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-
     opacity: 0;
     visibility: hidden;
     transform: translateY(10px);
     transition: all 0.25s ease;
-
     z-index: 999;
 }
 
@@ -144,21 +124,17 @@ body {
     color: #2b6edb;
 }
 
-/* Mostrar submenu no hover */
 .navbar ul li:hover>.submenu {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
 }
 
-/* Mantém item principal azul enquanto submenu está aberto */
 .navbar ul li:hover>a {
     color: #1c1698;
 }
 
 /* ===== CONTEÚDO ===== */
-/* ===== SEÇÃO GRUPOS ===== */
-
 .content {
     background: #fff;
     padding: 80px 0;
@@ -236,6 +212,9 @@ body {
 .estado {
     text-align: center;
     cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    border-radius: 8px;
+    padding: 6px;
 }
 
 .estado img {
@@ -258,7 +237,18 @@ body {
     font-weight: 500;
 }
 
-/* ===== FOOTER WIDGETS ===== */
+.estado:hover {
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.13);
+    background: #f0f6ff;
+}
+
+.estado.ativo {
+    background: #dceeff;
+    box-shadow: 0 0 0 2px #1a6bbf;
+}
+
+/* ===== FOOTER ===== */
 .footer-widgets {
     background-color: #050099;
     color: white;
@@ -282,18 +272,17 @@ body {
 }
 
 .footer-widgets h3 a {
-    color: #fff
+    color: #fff;
 }
 
 .footer-left a {
-    color: #fff
+    color: #fff;
 }
 
 .footer-center a {
     color: #fff;
 }
 
-/* ===== FOOTER COPYRIGHT ===== */
 .footer-bottom {
     background-color: #000170;
     color: #878789;
@@ -302,25 +291,7 @@ body {
     font-size: 13px;
 }
 
-/* ========== ESTILOS (mantidos exatamente iguais) ========== */
-.estado {
-    cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-    border-radius: 8px;
-    padding: 6px;
-}
-
-.estado:hover {
-    transform: translateY(-4px) scale(1.04);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.13);
-    background: #f0f6ff;
-}
-
-.estado.ativo {
-    background: #dceeff;
-    box-shadow: 0 0 0 2px #1a6bbf;
-}
-
+/* ===== PAINEL LATERAL ===== */
 #overlay {
     display: none;
     position: fixed;
@@ -332,11 +303,11 @@ body {
 
 @keyframes fadeIn {
     from {
-        opacity: 0
+        opacity: 0;
     }
 
     to {
-        opacity: 1
+        opacity: 1;
     }
 }
 
@@ -350,12 +321,13 @@ body {
     z-index: 1000;
     display: flex;
     flex-direction: column;
-    transition: right 0.32s cubic-bezier(.4, 0, .2, 1);
+    transition: right 0.32s cubic-bezier(0.4, 0, 0.2, 1);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 #painel-grupos.aberto {
     right: 0;
+    z-index: 999999999;
 }
 
 .painel-header {
@@ -372,7 +344,7 @@ body {
     margin: 0;
     font-size: 1.15rem;
     font-weight: 700;
-    letter-spacing: .3px;
+    letter-spacing: 0.3px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -455,41 +427,42 @@ body {
     padding: 12px 16px 20px;
 }
 
-.estado-msg {
-    text-align: center;
-    padding: 48px 20px;
-    color: #6b7a8d;
+/* GRID PARA CIDADES (DUAS COLUNAS) - CORREÇÃO DO ESPAÇAMENTO */
+#lista-grupos.cidades-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    /* espaçamento consistente entre linhas e colunas */
 }
 
-.estado-msg .icone {
-    font-size: 2.4rem;
-    margin-bottom: 10px;
-}
-
-.spinner {
-    width: 38px;
-    height: 38px;
-    border: 4px solid #dce8f5;
-    border-top-color: #1a6bbf;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    margin: 0 auto 14px;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
+/* ESTILO DO CARD (TANTO PARA CIDADES QUANTO PARA GRUPOS) */
 .grupo-card {
     border: 1px solid #e0e8f0;
     border-radius: 10px;
     padding: 14px 16px;
-    margin-bottom: 12px;
     background: #fff;
     transition: box-shadow 0.15s, border-color 0.15s;
     cursor: pointer;
+    height: 150px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    /* Remove qualquer margin que possa quebrar o grid */
+    margin: 0;
+}
+
+/* No modo grid (cidades), garantimos margin zero */
+#lista-grupos.cidades-grid .grupo-card {
+    margin: 0;
+    height: 150px;
+    justify-content: flex-start;
+    overflow-y: auto;
+}
+
+/* No modo lista (grupos), adicionamos espaçamento inferior */
+#lista-grupos:not(.cidades-grid) .grupo-card {
+    margin-bottom: 12px;
 }
 
 .grupo-card:hover {
@@ -501,7 +474,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .grupo-nome {
@@ -538,8 +511,7 @@ body {
 
 .grupo-info {
     font-size: 0.84rem;
-    color: #4a5568;
-    line-height: 1.55;
+    line-height: 1.45;
 }
 
 .grupo-info span {
@@ -554,26 +526,6 @@ body {
     color: #2d3748;
     white-space: nowrap;
     min-width: 70px;
-}
-
-.grupo-card-contatos {
-    display: flex;
-    gap: 10px;
-    margin-top: 8px;
-    flex-wrap: wrap;
-}
-
-.grupo-contato-link {
-    font-size: 0.8rem;
-    color: #1a6bbf;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-}
-
-.grupo-contato-link:hover {
-    text-decoration: underline;
 }
 
 .hint-clique {
@@ -594,6 +546,7 @@ body {
     background: #f8fafc;
 }
 
+/* ===== MODAL DE DETALHES ===== */
 #modal-overlay {
     display: none;
     position: fixed;
@@ -617,7 +570,7 @@ body {
     max-height: 90dvh;
     overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
-    animation: slideUp 0.25s cubic-bezier(.4, 0, .2, 1);
+    animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
 }
@@ -723,7 +676,7 @@ body {
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .8px;
+    letter-spacing: 0.8px;
     color: #1a6bbf;
     margin-bottom: 8px;
     padding-bottom: 4px;
@@ -809,6 +762,7 @@ body {
     color: #fff;
 }
 
+/* ===== MAPA GERAL MODAL ===== */
 #modal-mapa-geral {
     display: none;
     position: fixed;
@@ -876,6 +830,7 @@ body {
     pointer-events: none;
 }
 
+/* ===== MODAL DE PESQUISA ===== */
 #modal-pesquisa {
     display: none;
     position: fixed;
@@ -901,7 +856,7 @@ body {
     flex-direction: column;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
-    animation: slideUp 0.25s cubic-bezier(.4, 0, .2, 1);
+    animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .pesquisa-header {
@@ -952,13 +907,8 @@ body {
     padding: 16px 20px;
 }
 
-#painel-grupos.aberto {
-    z-index: 999999999;
-}
-
-/* ===== RESPONSIVO ===== */
+/* Responsividade geral */
 @media (max-width: 900px) {
-
     .navbar ul {
         flex-wrap: wrap;
         gap: 15px;
@@ -967,5 +917,18 @@ body {
     .widgets {
         flex-direction: column;
     }
+}
 
+/* Responsividade adicional para cards em telas pequenas */
+@media (max-width: 480px) {
+    #lista-grupos.cidades-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .grupo-card,
+    #lista-grupos.cidades-grid .grupo-card {
+        height: auto;
+        min-height: 150px;
+        overflow-y: visible;
+    }
 }
