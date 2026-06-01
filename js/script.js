@@ -184,6 +184,7 @@
         if (local.grupo_tipo === 'Al-Anon') badgeHtml = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
         else if (local.grupo_tipo === 'Alateen') badgeHtml = '<span class="grupo-badge badge-alateen">Alateen</span>';
         else if (local.grupo_tipo === 'Eletrônico') badgeHtml = '<span class="grupo-badge badge-eletronico">Eletrônico</span>';
+        else if (local.grupo_tipo === 'Comitê') badgeHtml = '<span class="grupo-badge badge-comite">Comitê</span>';
         else badgeHtml = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
 
         modalTitulo.textContent = nome;
@@ -230,7 +231,8 @@
         }
         modalInfos.innerHTML = infoHTML;
 
-        const isOnline = local.grupo_tipo === 'Eletrônico';
+        // Agora grupos do tipo "Eletrônico" e "Comitê" são tratados como online (sem mapa)
+        const isOnline = (local.grupo_tipo === 'Eletrônico' || local.grupo_tipo === 'Comitê');
         const modalMapaWrap = document.querySelector('.modal-mapa-wrap');
         const modalMapaDiv = document.getElementById('modal-mapa');
         const modalMapaAcoes = document.getElementById('modal-mapa-acoes');
@@ -386,6 +388,7 @@
                 let cls = 'badge-alanon';
                 if (tipo === 'Alateen') cls = 'badge-alateen';
                 else if (tipo === 'Eletrônico') cls = 'badge-eletronico';
+                else if (tipo === 'Comitê') cls = 'badge-comite';
                 return `<span class="grupo-badge ${cls}">${qtd} ${esc(tipo)}</span>`;
             }).join('');
 
@@ -400,7 +403,6 @@
             </div>`;
         }).join('');
 
-        // Adiciona evento de clique em cada card de cidade
         document.querySelectorAll('.cidade-card').forEach(card => {
             const handler = () => {
                 const nomeCidade = card.dataset.cidade;
@@ -479,6 +481,7 @@
             if (local.grupo_tipo === 'Al-Anon') badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
             else if (local.grupo_tipo === 'Alateen') badge = '<span class="grupo-badge badge-alateen">Alateen</span>';
             else if (local.grupo_tipo === 'Eletrônico') badge = '<span class="grupo-badge badge-eletronico">Eletrônico</span>';
+            else if (local.grupo_tipo === 'Comitê') badge = '<span class="grupo-badge badge-comite">Comitê</span>';
             else badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
             const endereco = [local.gr_endereco, local.gr_numero, local.gr_bairro].filter(Boolean).join(', ');
             const cidadeUF = [local.gr_cidade, local.gr_uf].filter(Boolean).join(' - ');
@@ -512,7 +515,7 @@
         });
     }
 
-    // ========== MODO TIPO (Eletrônicos, Alateen, etc.) ==========
+    // ========== MODO TIPO (Eletrônicos, Alateen, Comitê, etc.) ==========
     function abrirPorTipoGrupo(tipo, titulo) {
         if (!todosLocais) {
             carregarDados().then(() => {
@@ -564,6 +567,7 @@
             if (local.grupo_tipo === 'Al-Anon') badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
             else if (local.grupo_tipo === 'Alateen') badge = '<span class="grupo-badge badge-alateen">Alateen</span>';
             else if (local.grupo_tipo === 'Eletrônico') badge = '<span class="grupo-badge badge-eletronico">Eletrônico</span>';
+            else if (local.grupo_tipo === 'Comitê') badge = '<span class="grupo-badge badge-comite">Comitê</span>';
             else badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
             const endereco = [local.gr_endereco, local.gr_numero, local.gr_bairro].filter(Boolean).join(', ');
             const cidadeUF = [local.gr_cidade, local.gr_uf].filter(Boolean).join(' - ');
@@ -729,6 +733,7 @@
             if (local.grupo_tipo === 'Al-Anon') badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
             else if (local.grupo_tipo === 'Alateen') badge = '<span class="grupo-badge badge-alateen">Alateen</span>';
             else if (local.grupo_tipo === 'Eletrônico') badge = '<span class="grupo-badge badge-eletronico">Eletrônico</span>';
+            else if (local.grupo_tipo === 'Comitê') badge = '<span class="grupo-badge badge-comite">Comitê</span>';
             else badge = '<span class="grupo-badge badge-alanon">Al-Anon</span>';
             const endereco = [local.gr_endereco, local.gr_numero, local.gr_bairro].filter(Boolean).join(', ');
             const cidadeUF = [local.gr_cidade, local.gr_uf].filter(Boolean).join(' - ');
@@ -881,6 +886,7 @@
 
     // ========== BOTÕES TIPO ==========
     const btnEletronicos = document.getElementById('btn-grupos-eletronicos');
+    const btnAcolhimento = document.getElementById('btn-acolhimento');
     const btnAlateen = document.getElementById('btn-alateen');
     const btnAlAnon = document.getElementById('btn-al-anon');
 
@@ -888,6 +894,12 @@
         btnEletronicos.addEventListener('click', (e) => {
             e.preventDefault();
             abrirPorTipoGrupo('Eletrônico', 'Grupos Eletrônicos');
+        });
+    }
+    if (btnAcolhimento) {
+        btnAcolhimento.addEventListener('click', (e) => {
+            e.preventDefault();
+            abrirPorTipoGrupo('Comitê', 'Grupos de Acolhimento');
         });
     }
     if (btnAlateen) {
