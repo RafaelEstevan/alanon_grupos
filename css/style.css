@@ -1,5 +1,19 @@
+/* ===== RESET E BASE ===== */
+
+/* CORREÇÃO 1: box-sizing global e sem overflow horizontal */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html {
+    overflow-x: hidden;
+}
+
 body {
     margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
     font-family: Arial, Helvetica, sans-serif;
     color: #333;
 }
@@ -57,11 +71,25 @@ body {
 /* ===== NAVBAR ===== */
 .navbar {
     background: #ffffff;
+    position: relative;
 }
 
 .navbar .container {
     max-width: 1200px;
     margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.menu-toggle {
+    display: none;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 10px;
+    color: #333;
+    order: 1;
 }
 
 .navbar ul {
@@ -71,6 +99,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex: 1 1 auto;
+    order: 0;
 }
 
 .navbar ul li {
@@ -124,14 +154,63 @@ body {
     color: #2b6edb;
 }
 
-.navbar ul li:hover>.submenu {
+.navbar ul li:hover > .submenu {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
 }
 
-.navbar ul li:hover>a {
+.navbar ul li:hover > a {
     color: #1c1698;
+}
+
+/* ===== RESPONSIVIDADE DO MENU ===== */
+@media (max-width: 768px) {
+    .menu-toggle {
+        display: block;
+    }
+
+    .navbar ul {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        background: #fff;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 999;
+        box-shadow: 0 4px 12px rgba(0,0,0,.15);
+        order: 2;
+    }
+
+    .navbar ul.active {
+        display: flex;
+    }
+
+    .navbar ul li {
+        width: 100%;
+        border-bottom: 1px solid #eee;
+    }
+
+    .navbar ul li a {
+        display: block;
+        padding: 15px;
+        text-align: left;
+    }
+
+    .navbar ul li .submenu {
+        position: static;
+        box-shadow: none;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        background: #f5f5f5;
+        padding-left: 20px;
+        display: none;
+    }
+    .navbar ul li:hover .submenu {
+        display: none;
+    }
 }
 
 /* ===== CONTEÚDO ===== */
@@ -217,13 +296,27 @@ body {
     padding: 6px;
 }
 
-.estado img {
-    width: auto;
-    height: 75px;
-    object-fit: contain;
+/* CORREÇÃO 2: borda na imagem acompanha o tamanho real da imagem.
+   Usamos display:inline-block no wrapper para que a borda abraçe
+   exatamente o conteúdo da imagem, sem depender do padding do .estado */
+.estado .bandeira-wrap {
+    display: inline-block;
+    border: 2px solid #000;
     border-radius: 8px;
+    overflow: hidden;
+    line-height: 0;      /* remove espaço fantasma abaixo da img */
+    width: 100%;
+}
+
+.estado img {
+    width: 100%;
+    height: auto;
+    max-height: 75px;
+    object-fit: contain;
+    display: block;      /* remove espaço fantasma inline */
+    border: none;        /* borda agora está no .bandeira-wrap */
+    border-radius: 0;
     transition: transform 0.2s ease;
-    border: #000000 2px solid;
 }
 
 .estado img:hover {
@@ -302,13 +395,8 @@ body {
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 #painel-grupos {
@@ -427,15 +515,12 @@ body {
     padding: 12px 16px 20px;
 }
 
-/* GRID PARA CIDADES (DUAS COLUNAS) - CORREÇÃO DO ESPAÇAMENTO */
 #lista-grupos.cidades-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
-    /* espaçamento consistente entre linhas e colunas */
 }
 
-/* ESTILO DO CARD (TANTO PARA CIDADES QUANTO PARA GRUPOS) */
 .grupo-card {
     border: 1px solid #e0e8f0;
     border-radius: 10px;
@@ -448,11 +533,9 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    /* Remove qualquer margin que possa quebrar o grid */
     margin: 0;
 }
 
-/* No modo grid (cidades), garantimos margin zero */
 #lista-grupos.cidades-grid .grupo-card {
     margin: 0;
     height: 150px;
@@ -460,7 +543,6 @@ body {
     overflow-y: auto;
 }
 
-/* No modo lista (grupos), adicionamos espaçamento inferior */
 #lista-grupos:not(.cidades-grid) .grupo-card {
     margin-bottom: 12px;
 }
@@ -581,15 +663,8 @@ body {
 }
 
 @keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(24px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .modal-header {
@@ -912,28 +987,174 @@ body {
     padding: 16px 20px;
 }
 
-/* Responsividade geral */
-@media (max-width: 900px) {
-    .navbar ul {
-        flex-wrap: wrap;
+/* ===== RESPONSIVIDADE GERAL ===== */
+@media (max-width: 1024px) {
+    .fusion-row {
+        flex-direction: column;
+        text-align: center;
         gap: 15px;
     }
-
-    .widgets {
-        flex-direction: column;
+    .fusion-header-content-3-wrapper {
+        text-align: center;
+    }
+    .fusion-header-tagline {
+        font-size: 20px;
+    }
+    .grid-estados {
+        grid-template-columns: repeat(5, minmax(80px, 1fr));
+        gap: 12px;
+    }
+    .estado img {
+        max-height: 65px;
     }
 }
 
-/* Responsividade adicional para cards em telas pequenas */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+    .container, .fusion-row {
+        width: 95%;
+        max-width: 95%;
+    }
+    .content {
+        padding: 40px 0;
+    }
+    .grupos-section h1 {
+        font-size: 32px;
+        margin-bottom: 25px;
+    }
+    .botoes-grupos {
+        gap: 10px;
+    }
+    .btn, .btn-outline {
+        font-size: 15px;
+        padding: 10px 14px;
+    }
+    .grid-estados {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+    .estado {
+        padding: 4px;
+    }
+    .estado img {
+        max-height: 70px;
+    }
+    /* borda mais fina em mobile */
+    .estado .bandeira-wrap {
+        border-width: 1px;
+    }
+    .estado span {
+        font-size: 12px;
+    }
+    #painel-grupos {
+        width: 100%;
+        max-width: 100%;
+    }
+    .painel-header {
+        padding: 16px;
+    }
+    .painel-header h2 {
+        font-size: 1rem;
+    }
+    .painel-filtros {
+        padding: 10px;
+    }
+    .filtro-btn {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
     #lista-grupos.cidades-grid {
         grid-template-columns: 1fr;
     }
-
-    .grupo-card,
-    #lista-grupos.cidades-grid .grupo-card {
+    .grupo-card {
         height: auto;
-        min-height: 150px;
-        overflow-y: visible;
+        min-height: 120px;
+        overflow: visible;
+    }
+    #modal-grupo {
+        width: 100%;
+        max-height: 95vh;
+        border-radius: 10px;
+    }
+    .modal-body {
+        grid-template-columns: 1fr;
+    }
+    .modal-infos {
+        border-right: none;
+        border-bottom: 1px solid #e8edf3;
+    }
+    .modal-header {
+        padding: 16px;
+    }
+    .modal-header h2 {
+        font-size: 1rem;
+    }
+    .modal-infos {
+        padding: 16px;
+    }
+    #modal-mapa {
+        min-height: 250px;
+    }
+    .mapa-geral-container {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+    }
+    .pesquisa-container {
+        width: 100%;
+        max-height: 95vh;
+    }
+    .pesquisa-header, .pesquisa-busca, .pesquisa-resultados {
+        padding: 14px;
+    }
+    .widgets {
+        flex-direction: column;
+    }
+    .widget {
+        min-width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .topbar {
+        font-size: 12px;
+        padding: 8px 0;
+        height: auto;
+    }
+    .fusion-logo img {
+        max-height: 80px;
+    }
+    .fusion-header-tagline {
+        font-size: 16px;
+    }
+    .grupos-section h1 {
+        font-size: 26px;
+    }
+    .grid-estados {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .estado img {
+        max-height: 55px;
+    }
+    /* borda ainda mais fina nos menores */
+    .estado .bandeira-wrap {
+        border-width: 1px;
+    }
+    .estado span {
+        font-size: 11px;
+        line-height: 1.2;
+    }
+    .btn, .btn-outline {
+        width: 100%;
+        text-align: center;
+    }
+    .grupo-nome {
+        font-size: 0.9rem;
+    }
+    .grupo-info {
+        font-size: 0.78rem;
+    }
+    .painel-header h2, .modal-header h2 {
+        font-size: 0.95rem;
     }
 }

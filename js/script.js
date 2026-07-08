@@ -12,13 +12,11 @@
     let mapaLeaflet = null;
     let mapaMarker = null;
 
-    // Estado de navegação por cidades
     let modoCidades = false;
     let cidadeSelecionada = null;
     let nomeCidadeSelecionada = null;
     let nomeEstadoAtivo = null;
 
-    // Elementos DOM
     const painel = document.getElementById('painel-grupos');
     const overlay = document.getElementById('overlay');
     const btnFechar = document.getElementById('btn-fechar');
@@ -99,7 +97,7 @@
             if (data.coords[key] && data.coords[key].expires > Date.now()) {
                 return data.coords[key].coords;
             }
-        } catch (e) { }
+        } catch (e) {}
         return null;
     }
 
@@ -114,7 +112,7 @@
                 expires: Date.now() + 7 * 24 * 60 * 60 * 1000
             };
             localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-        } catch (e) { }
+        } catch (e) {}
     }
 
     function montarEnderecoCompleto(local) {
@@ -231,7 +229,6 @@
         }
         modalInfos.innerHTML = infoHTML;
 
-        // Agora grupos do tipo "Eletrônico" e "Comitê" são tratados como online (sem mapa)
         const isOnline = (local.grupo_tipo === 'Eletrônico' || local.grupo_tipo === 'Comitê');
         const modalMapaWrap = document.querySelector('.modal-mapa-wrap');
         const modalMapaDiv = document.getElementById('modal-mapa');
@@ -350,7 +347,7 @@
         if (painelFiltros) painelFiltros.style.display = 'none';
     }
 
-    // ========== LISTAR CIDADES DO ESTADO (com grid de duas colunas) ==========
+    // ========== LISTAR CIDADES DO ESTADO ==========
     function renderizarCidades() {
         listaEl.classList.add('cidades-grid');
 
@@ -515,7 +512,7 @@
         });
     }
 
-    // ========== MODO TIPO (Eletrônicos, Alateen, Comitê, etc.) ==========
+    // ========== MODO TIPO ==========
     function abrirPorTipoGrupo(tipo, titulo) {
         if (!todosLocais) {
             carregarDados().then(() => {
@@ -887,8 +884,7 @@
     // ========== BOTÕES TIPO ==========
     const btnEletronicos = document.getElementById('btn-grupos-eletronicos');
     const btnAcolhimento = document.getElementById('btn-acolhimento');
-    const btnAlateen = document.getElementById('btn-alateen');
-    const btnAlAnon = document.getElementById('btn-al-anon');
+    // (Se existirem outros botões, adicione aqui)
 
     if (btnEletronicos) {
         btnEletronicos.addEventListener('click', (e) => {
@@ -902,16 +898,16 @@
             abrirPorTipoGrupo('Comitê', 'Grupos de Acolhimento');
         });
     }
-    if (btnAlateen) {
-        btnAlateen.addEventListener('click', (e) => {
-            e.preventDefault();
-            abrirPorTipoGrupo('Alateen', 'Grupos Alateen');
-        });
-    }
-    if (btnAlAnon) {
-        btnAlAnon.addEventListener('click', (e) => {
-            e.preventDefault();
-            abrirPorTipoGrupo('Al-Anon', 'Grupos Al-Anon');
-        });
-    }
 })();
+
+// ========== MENU MOBILE ==========
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('menu-toggle');
+    const menu = document.getElementById('menu-mobile');
+
+    if (toggle && menu) {
+        toggle.addEventListener('click', () => {
+            menu.classList.toggle('active');
+        });
+    }
+});
